@@ -1,0 +1,38 @@
+import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.hometech.app',
+  appName: 'Order Plus ERP',
+  webDir: 'www',
+  server: {
+    url: 'https://orderpluserp-zeta.vercel.app',
+    cleartext: false,
+    allowNavigation: ['orderpluserp-zeta.vercel.app', '*.vercel.app', '*.supabase.co'],
+  },
+  android: {
+    allowMixedContent: false,
+    backgroundColor: '#000000',
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      backgroundColor: '#000000',
+      showSpinner: false,
+      launchAutoHide: true,
+    },
+    Geolocation: {
+      enableHighAccuracy: true,
+    },
+    StatusBar: {
+      style: 'LIGHT',
+      backgroundColor: '#000000',
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
+};
+
+export default config;

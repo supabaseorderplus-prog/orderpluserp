@@ -1,0 +1,72 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
+const compression_1 = __importDefault(require("compression"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const morgan_1 = __importDefault(require("morgan"));
+const env_1 = require("./config/env");
+const errorHandler_1 = require("./middleware/errorHandler");
+const rateLimiter_1 = require("./middleware/rateLimiter");
+const routes_1 = __importDefault(require("./modules/auth/routes"));
+const routes_2 = __importDefault(require("./modules/users/routes"));
+const routes_3 = __importDefault(require("./modules/products/routes"));
+const routes_4 = __importDefault(require("./modules/pricing/routes"));
+const routes_5 = __importDefault(require("./modules/geography/routes"));
+const routes_6 = __importDefault(require("./modules/routes/routes"));
+const routes_7 = __importDefault(require("./modules/tracking/routes"));
+const routes_8 = __importDefault(require("./modules/duty/routes"));
+const routes_9 = __importDefault(require("./modules/orders/routes"));
+const routes_10 = __importDefault(require("./modules/inventory/routes"));
+const routes_11 = __importDefault(require("./modules/schemes/routes"));
+const routes_12 = __importDefault(require("./modules/reorder/routes"));
+const routes_13 = __importDefault(require("./modules/payments/routes"));
+const routes_14 = __importDefault(require("./modules/analytics/routes"));
+const routes_15 = __importDefault(require("./modules/notifications/routes"));
+const routes_16 = __importDefault(require("./modules/export/routes"));
+const routes_17 = __importDefault(require("./modules/parties/routes"));
+const routes_18 = __importDefault(require("./modules/price-lists/routes"));
+const routes_19 = __importDefault(require("./modules/td-config/routes"));
+const routes_20 = __importDefault(require("./modules/credit-analysis/routes"));
+const app = (0, express_1.default)();
+app.use((0, helmet_1.default)());
+app.use((0, cors_1.default)({
+    origin: env_1.env.CORS_ORIGIN.split(','),
+    credentials: true,
+}));
+app.use((0, compression_1.default)());
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true }));
+app.use((0, cookie_parser_1.default)());
+app.use((0, morgan_1.default)('combined'));
+app.use(rateLimiter_1.apiLimiter);
+app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.use('/api/v1/auth', routes_1.default);
+app.use('/api/v1/users', routes_2.default);
+app.use('/api/v1/products', routes_3.default);
+app.use('/api/v1/pricing', routes_4.default);
+app.use('/api/v1/geography', routes_5.default);
+app.use('/api/v1/routes', routes_6.default);
+app.use('/api/v1/tracking', routes_7.default);
+app.use('/api/v1/duty', routes_8.default);
+app.use('/api/v1/orders', routes_9.default);
+app.use('/api/v1/inventory', routes_10.default);
+app.use('/api/v1/schemes', routes_11.default);
+app.use('/api/v1/reorder', routes_12.default);
+app.use('/api/v1/payments', routes_13.default);
+app.use('/api/v1/analytics', routes_14.default);
+app.use('/api/v1/notifications', routes_15.default);
+app.use('/api/v1/export', routes_16.default);
+app.use('/api/v1/parties', routes_17.default);
+app.use('/api/v1/price-lists', routes_18.default);
+app.use('/api/v1/td-config', routes_19.default);
+app.use('/api/v1/credit-analysis', routes_20.default);
+app.use(errorHandler_1.errorHandler);
+exports.default = app;
+//# sourceMappingURL=app.js.map

@@ -1,0 +1,433 @@
+2026-03-22 16:58:18 [INFO]: Server running on port 4000 in development mode
+2026-03-22 16:58:18 [INFO]: Health check: http://localhost:4000/health
+2026-03-22 16:58:18 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-22 16:58:18 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-22 16:58:18 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-22 16:58:18 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-22 16:58:18 [INFO]: All background jobs initialized
+2026-03-22 17:02:11 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:02:11 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:02:11 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:02:11 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:08:26 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:09:15 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:09:51 [INFO]: Server running on port 4000 in development mode
+2026-03-22 17:09:51 [INFO]: Health check: http://localhost:4000/health
+2026-03-22 17:09:51 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-22 17:09:51 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-22 17:09:51 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-22 17:09:51 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-22 17:09:51 [INFO]: All background jobs initialized
+2026-03-22 17:10:16 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 3). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:10:28 [INFO]: Server running on port 4000 in development mode
+2026-03-22 17:10:28 [INFO]: Health check: http://localhost:4000/health
+2026-03-22 17:10:28 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-22 17:10:28 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-22 17:10:28 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-22 17:10:28 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-22 17:10:28 [INFO]: All background jobs initialized
+2026-03-22 17:14:21 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:14:21 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:14:21 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:14:21 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-22 17:19:46 [ERROR]: Error: write EPIPE
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at console.value (node:internal/console/constructor:303:16)
+    at console.warn (node:internal/console/constructor:383:26)
+    at EventEmitter.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/src/config/redis.ts:24:13)
+2026-03-23 01:12:19 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:12:19 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:12:19 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:12:19 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:12:19 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:12:19 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:12:19 [INFO]: All background jobs initialized
+2026-03-23 01:15:01 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:15:01 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:15:01 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:15:01 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:15:01 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:15:01 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:15:01 [INFO]: All background jobs initialized
+2026-03-23 01:15:16 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:15:16 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:15:16 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:15:16 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:15:16 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:15:16 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:15:16 [INFO]: All background jobs initialized
+2026-03-23 01:15:26 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:15:26 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:15:26 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:15:26 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:15:26 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:15:26 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:15:26 [INFO]: All background jobs initialized
+2026-03-23 01:15:36 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:15:36 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:15:36 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:15:36 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:15:36 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:15:36 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:15:36 [INFO]: All background jobs initialized
+2026-03-23 01:15:46 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:15:46 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:15:46 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:15:46 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:15:46 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:15:46 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:15:46 [INFO]: All background jobs initialized
+2026-03-23 01:16:05 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:16:05 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:16:05 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:16:05 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:16:05 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:16:05 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:16:05 [INFO]: All background jobs initialized
+2026-03-23 01:16:13 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:16:13 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:16:13 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:16:13 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:16:13 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:16:13 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:16:13 [INFO]: All background jobs initialized
+2026-03-23 01:18:50 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:18:50 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:18:50 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:18:50 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:18:50 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:18:50 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:18:50 [INFO]: All background jobs initialized
+2026-03-23 01:22:43 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:22:43 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:22:43 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:22:43 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:24:21 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:24:21 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:24:21 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:24:21 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:24:21 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:24:21 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:24:21 [INFO]: All background jobs initialized
+2026-03-23 01:27:40 [INFO]: Server running on port 4000 in development mode
+2026-03-23 01:27:40 [INFO]: Health check: http://localhost:4000/health
+2026-03-23 01:27:40 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-23 01:27:40 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-23 01:27:40 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-23 01:27:40 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-23 01:27:40 [INFO]: All background jobs initialized
+2026-03-23 01:31:33 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:31:33 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:31:33 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-23 01:31:33 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 12:50:54 [INFO]: Server running on port 4000 in development mode
+2026-03-24 12:50:54 [INFO]: Health check: http://localhost:4000/health
+2026-03-24 12:50:54 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-24 12:50:54 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-24 12:50:54 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-24 12:50:54 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-24 12:50:54 [INFO]: All background jobs initialized
+2026-03-24 12:54:47 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 12:54:47 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 12:54:47 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 12:54:47 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 13:03:36 [INFO]: Server running on port 4000 in development mode
+2026-03-24 13:03:36 [INFO]: Health check: http://localhost:4000/health
+2026-03-24 13:03:36 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-24 13:03:36 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-24 13:03:36 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-24 13:03:36 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-24 13:03:36 [INFO]: All background jobs initialized
+2026-03-24 13:04:08 [ERROR]: Error
+    at serve (unknown)
+    at <anonymous> (node:_http_server:271:39)
+    at <anonymous> (node:_http_server:248:33)
+    at /Users/sahilrazi/Downloads/HometechWebApp/backend/src/server.ts:14:8
+    at moduleEvaluation (unknown:1:11)
+    at moduleEvaluation (unknown:1:11)
+    at loadAndEvaluateModule (unknown:2)
+    at processTicksAndRejections (unknown:7:39)
+2026-03-24 13:04:43 [ERROR]: Error
+    at serve (unknown)
+    at <anonymous> (node:_http_server:271:39)
+    at <anonymous> (node:_http_server:248:33)
+    at <anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/dist/server.js:15:8)
+    at <anonymous> (unknown:11:43)
+2026-03-24 13:05:24 [ERROR]: Error
+    at serve (unknown)
+    at <anonymous> (node:_http_server:271:39)
+    at <anonymous> (node:_http_server:248:33)
+    at <anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/dist/server.js:15:8)
+    at <anonymous> (unknown:11:43)
+2026-03-24 13:06:30 [INFO]: Server running on port 4000 in development mode
+2026-03-24 13:06:30 [INFO]: Health check: http://localhost:4000/health
+2026-03-24 13:06:30 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-24 13:06:30 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-24 13:06:30 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-24 13:06:30 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-24 13:06:30 [INFO]: All background jobs initialized
+2026-03-24 13:10:23 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 13:10:23 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 13:10:23 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 13:10:23 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-24 14:04:57 [ERROR]: Error: write EIO
+    at afterWriteDispatched (node:internal/stream_base_commons:161:15)
+    at writeGeneric (node:internal/stream_base_commons:152:3)
+    at Socket._writeGeneric (node:net:958:11)
+    at Socket._write (node:net:970:8)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at Array.logRequest (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/morgan/index.js:130:14)
+    at listener (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/morgan/node_modules/on-finished/index.js:169:15)
+    at onFinish (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/morgan/node_modules/on-finished/index.js:100:5)
+2026-03-25 09:46:36 [INFO]: Server running on port 4000 in development mode
+2026-03-25 09:46:36 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 09:46:36 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 09:46:36 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 09:46:36 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 09:46:36 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 09:46:36 [INFO]: All background jobs initialized
+2026-03-25 09:48:12 [INFO]: Server running on port 4000 in development mode
+2026-03-25 09:48:12 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 09:48:12 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 09:48:12 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 09:48:12 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 09:48:12 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 09:48:12 [INFO]: All background jobs initialized
+2026-03-25 09:48:44 [INFO]: Server running on port 4000 in development mode
+2026-03-25 09:48:44 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 09:48:44 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 09:48:44 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 09:48:44 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 09:48:44 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 09:48:44 [INFO]: All background jobs initialized
+2026-03-25 09:52:37 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 09:52:37 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 09:52:37 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 09:52:37 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 09:57:22 [INFO]: Server running on port 4000 in development mode
+2026-03-25 09:57:22 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 09:57:22 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 09:57:22 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 09:57:22 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 09:57:22 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 09:57:22 [INFO]: All background jobs initialized
+2026-03-25 09:59:37 [INFO]: Server running on port 4000 in development mode
+2026-03-25 09:59:37 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 09:59:37 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 09:59:37 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 09:59:37 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 09:59:37 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 09:59:37 [INFO]: All background jobs initialized
+2026-03-25 10:03:30 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:03:30 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:03:30 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:03:30 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:06:56 [INFO]: Server running on port 4000 in development mode
+2026-03-25 10:06:56 [INFO]: Health check: http://localhost:4000/health
+2026-03-25 10:06:56 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-03-25 10:06:56 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-03-25 10:06:56 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-03-25 10:06:56 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-03-25 10:06:56 [INFO]: All background jobs initialized
+2026-03-25 10:10:49 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:10:49 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:10:49 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-03-25 10:10:49 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahilrazi/Downloads/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-06-12 09:11:09 [INFO]: Server running on port 4000 in development mode
+2026-06-12 09:11:09 [INFO]: Health check: http://localhost:4000/health
+2026-06-12 09:11:09 [INFO]: [ReorderJob] Scheduled every 10 minutes
+2026-06-12 09:11:09 [INFO]: [SchemeProgressJob] Scheduled daily at midnight
+2026-06-12 09:11:09 [INFO]: [RouteReminderJob] Scheduled daily at 7 AM
+2026-06-12 09:11:09 [INFO]: [GpsCleanupJob] Scheduled weekly on Sundays at 3 AM
+2026-06-12 09:11:09 [INFO]: All background jobs initialized
+2026-06-12 09:11:09 [ERROR]: PrismaClientInitializationError: Unable to require(`[2m/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node[22m`).
+The Prisma engines do not seem to be compatible with your system. Please refer to the documentation about Prisma's system requirements: [4mhttps://pris.ly/d/system-requirements[24m
+
+Details: dlopen(/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node, 0x0001): tried: '/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node' (code signature in <464CDD93-853B-3902-B8C9-82EA1C900AED> '/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node' not valid for use in process: library load disallowed by system policy), '/System/Volumes/Preboot/Cryptexes/OS/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node' (no such file), '/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node' (code signature in <464CDD93-853B-3902-B8C9-82EA1C900AED> '/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/.prisma/client/libquery_engine-darwin-arm64.dylib.node' not valid for use in process: library load disallowed by system policy)
+    at Object.loadLibrary (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/@prisma/client/src/runtime/core/engines/library/DefaultLibraryLoader.ts:73:13)
+    at async Qr.loadEngine (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/@prisma/client/src/runtime/core/engines/library/LibraryEngine.ts:292:22)
+    at async Qr.instantiateLibrary (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/@prisma/client/src/runtime/core/engines/library/LibraryEngine.ts:243:5)
+2026-06-12 09:15:02 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-06-12 09:15:02 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-06-12 09:15:02 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
+2026-06-12 09:15:02 [ERROR]: MaxRetriesPerRequestError: Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.
+    at Socket.<anonymous> (/Users/sahil/Documents/RAZISWEBLAB/HometechWebApp/backend/node_modules/ioredis/built/redis/event_handler.js:207:37)
+    at Object.onceWrapper (node:events:639:26)
+    at Socket.emit (node:events:524:28)
+    at TCP.<anonymous> (node:net:343:12)
