@@ -72,7 +72,7 @@ public class LocationForegroundService extends Service {
     static final String KEY_QUEUE   = "offline_location_queue";
 
     // API base — matches the server URL in capacitor.config.ts
-    private static final String API_BASE = "https://orderpluserp-zeta.vercel.app";
+    private static final String API_BASE = "https://www.orderpluserp.in";
 
     // Ten-second high-accuracy fixes while duty is active. Android and the GPS
     // chipset may occasionally batch/delay a fix, so every point is queued before

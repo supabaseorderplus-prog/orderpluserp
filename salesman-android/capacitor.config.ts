@@ -5,9 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Order Plus ERP',
   webDir: 'www',
   server: {
-    url: 'https://orderpluserp-zeta.vercel.app',
+    url: 'https://www.orderpluserp.in',
     cleartext: false,
-    allowNavigation: ['orderpluserp-zeta.vercel.app', '*.vercel.app', '*.supabase.co'],
+    allowNavigation: ['www.orderpluserp.in', 'orderpluserp.in', 'hometech-webapp.vercel.app', '*.vercel.app', '*.supabase.co'],
   },
   android: {
     allowMixedContent: false,
