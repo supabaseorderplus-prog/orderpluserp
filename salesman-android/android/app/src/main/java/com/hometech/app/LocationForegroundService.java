@@ -1,13 +1,16 @@
 package com.hometech.app;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.location.LocationManager;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -146,8 +149,28 @@ public class LocationForegroundService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         // App was swiped from recents — service keeps running because it's a foreground service.
-        // START_STICKY ensures the OS restarts it if killed under memory pressure.
         Log.i(TAG, "App removed from recents — location tracking continues in foreground service");
+        
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean isActive = prefs.getBoolean(KEY_ACTIVE, false);
+        if (isActive) {
+            // Schedule an immediate AlarmManager wakeup call to restart the service if killed by OS memory manager
+            Intent restartServiceIntent = new Intent(getApplicationContext(), LocationForegroundService.class);
+            restartServiceIntent.setAction(ACTION_START);
+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                : PendingIntent.FLAG_UPDATE_CURRENT;
+            PendingIntent restartPendingIntent = PendingIntent.getService(
+                getApplicationContext(), 1, restartServiceIntent, flags);
+            AlarmManager alarmService = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+            if (alarmService != null) {
+                alarmService.set(
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 1000,
+                    restartPendingIntent
+                );
+            }
+        }
         super.onTaskRemoved(rootIntent);
     }
 
@@ -226,7 +249,11 @@ public class LocationForegroundService extends Service {
     }
 
     private void startForegroundWithNotification() {
-        startForeground(NOTIFICATION_ID, buildNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        }
         acquireTrackingWakeLock();
     }
 

@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { api, getUser } from "@/lib/api";
+
+const LeafletTrailMap = dynamic(() => import("@/components/LeafletTrailMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-44 w-full items-center justify-center rounded-xl bg-black/[0.03] text-xs text-zinc-400">
+      Loading Live Map…
+    </div>
+  ),
+});
 import { publishLocation, disconnectMqtt } from "@/lib/mqtt-client";
 import { evaluateTrackingSegment, MAX_ACCEPTABLE_ACCURACY_M } from "@/lib/tracking-integrity";
 import type { SalesmanGpsStatus } from "@/components/SalesmanGpsGuardian";
@@ -286,6 +296,7 @@ export default function SalesmanDashboard() {
   const [activeRouteStops, setActiveRouteStops] = useState<ActiveRouteStop[]>([]);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus | null>(null);
   const [remoteGpsHealth, setRemoteGpsHealth] = useState<RemoteGpsHealth | null>(null);
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
 
   const tickRef            = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchIdRef         = useRef<number | null>(null);
@@ -589,9 +600,11 @@ export default function SalesmanDashboard() {
             if (decision.countsDistance) distanceRef.current += decision.distanceM / 1000;
             setLiveDistance(parseFloat(distanceRef.current.toFixed(2)));
             lastPosRef.current = { lat: latitude, lng: longitude, accuracy, recordedAt };
+            setCurrentPos({ lat: latitude, lng: longitude, accuracy });
           }
         } else {
           lastPosRef.current = { lat: latitude, lng: longitude, accuracy, recordedAt };
+          setCurrentPos({ lat: latitude, lng: longitude, accuracy });
         }
       }
 
@@ -1045,6 +1058,24 @@ export default function SalesmanDashboard() {
           <p className="text-red-400 text-xs mb-3 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5" />{locationError}
           </p>
+        )}
+
+        {/* Live GPS Map Display for Salesman */}
+        {isOnDuty && (
+          <div className="relative w-full h-56 rounded-xl overflow-hidden mb-4 border border-black/[0.08] shadow-sm">
+            <LeafletTrailMap
+              trail={[]}
+              salesman={user?.name || "Salesman"}
+              fallbackLat={currentPos?.lat || 20.5937}
+              fallbackLng={currentPos?.lng || 78.9629}
+              liveLocation={currentPos ? {
+                latitude: currentPos.lat,
+                longitude: currentPos.lng,
+                accuracy: currentPos.accuracy,
+                recorded_at: new Date().toISOString(),
+              } : undefined}
+            />
+          </div>
         )}
 
         {/* Action button */}
