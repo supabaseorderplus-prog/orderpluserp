@@ -454,7 +454,7 @@ export default function LoginPage() {
         {!isCapacitor && (
           <div className="mt-6 flex justify-center">
             <a
-              href="/api/v1/app/download"
+              href="/api/v1/app/download?v=2"
               className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-200/40 transition-all hover:from-amber-500 hover:to-orange-600 hover:shadow-amber-300/50"
             >
               <Download className="h-4 w-4" />

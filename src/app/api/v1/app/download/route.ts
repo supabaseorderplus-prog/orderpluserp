@@ -18,9 +18,10 @@ export async function GET() {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.android.package-archive',
-      'Content-Disposition': 'attachment; filename="Order-Plus-ERP.apk"',
+      'Content-Disposition': 'attachment; filename="Order-Plus-ERP-v2.apk"',
       'Content-Length': apkBuffer.length.toString(),
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
     },
   })
 }
