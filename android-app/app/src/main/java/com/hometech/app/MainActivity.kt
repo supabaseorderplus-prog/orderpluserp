@@ -189,6 +189,53 @@ class MainActivity : AppCompatActivity() {
                                 } catch(e) { resolve({ active: false }); }
                               });
                             },
+                            getGpsStatus: function() {
+                              return new Promise(function(resolve) {
+                                try {
+                                  var raw = window.AndroidTracking.getGpsStatus();
+                                  resolve(JSON.parse(raw));
+                                } catch(e) {
+                                  resolve({
+                                    locationServicesEnabled: false,
+                                    fineLocationGranted: false,
+                                    backgroundLocationGranted: false,
+                                    notificationsGranted: false,
+                                    batteryOptimizationDisabled: false,
+                                    trackingActive: false
+                                  });
+                                }
+                              });
+                            },
+                            openLocationSettings: function() {
+                              return new Promise(function(resolve) {
+                                try {
+                                  var opened = !!window.AndroidTracking.openLocationSettings();
+                                  resolve({ opened: opened });
+                                } catch(e) { resolve({ opened: false }); }
+                              });
+                            },
+                            openNotificationSettings: function() {
+                              return new Promise(function(resolve) {
+                                try {
+                                  var opened = !!window.AndroidTracking.openNotificationSettings();
+                                  resolve({ opened: opened });
+                                } catch(e) { resolve({ opened: false }); }
+                              });
+                            },
+                            openBackgroundSettings: function() {
+                              return new Promise(function(resolve) {
+                                try {
+                                  var opened = !!window.AndroidTracking.openBackgroundSettings();
+                                  resolve({ opened: opened });
+                                } catch(e) { resolve({ opened: false }); }
+                              });
+                            },
+                            showGpsOffWarning: function() {
+                              return new Promise(function(resolve) {
+                                try { window.AndroidTracking.showGpsOffWarning(); } catch(e) {}
+                                resolve();
+                              });
+                            },
                             requestBackgroundPermission: function() {
                               return new Promise(function(resolve) {
                                 try { window.AndroidTracking.requestBackgroundPermission(); } catch(e) {}
@@ -197,6 +244,7 @@ class MainActivity : AppCompatActivity() {
                             },
                             requestReliabilityPermissions: function() {
                               try {
+                                window.AndroidTracking.openBackgroundSettings();
                                 return Promise.resolve(JSON.parse(window.AndroidTracking.getReliabilityStatus()));
                               } catch(e) {
                                 return Promise.resolve({

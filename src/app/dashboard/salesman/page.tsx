@@ -76,20 +76,20 @@ async function startNativeTrackingIfAvailable(
   const companyId = localStorage.getItem("activeCompanyId") || "";
   if (!authToken || !userId) return false;
 
-  const initialStatus = await bgPlugin.getGpsStatus();
-  if (!initialStatus.locationServicesEnabled && !resumeActiveDuty) {
-    await bgPlugin.openLocationSettings().catch(() => ({ opened: false }));
+  const initialStatus = await bgPlugin.getGpsStatus?.().catch(() => null);
+  if (initialStatus && !initialStatus.locationServicesEnabled && !resumeActiveDuty) {
+    await bgPlugin.openLocationSettings?.().catch(() => ({ opened: false }));
     throw new Error("GPS is turned off. Turn it on in your phone settings before starting duty.");
   }
 
   if (!resumeActiveDuty) {
     try {
-      await bgPlugin.requestBackgroundPermission();
+      await bgPlugin.requestBackgroundPermission?.();
     } catch {
       // Foreground service can still run while the notification is active.
     }
     try {
-      await bgPlugin.requestReliabilityPermissions();
+      await bgPlugin.requestReliabilityPermissions?.();
     } catch {
       // Some managed/OEM devices do not expose a battery-exemption dialog.
     }

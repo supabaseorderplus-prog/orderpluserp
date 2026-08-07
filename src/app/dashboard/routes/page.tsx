@@ -368,14 +368,14 @@ async function startPersistentAndroidTracking(
   if (!plugin) return false;
   const authToken = localStorage.getItem("accessToken") || "";
   if (!authToken || !userId) return false;
-  const gpsStatus = await plugin.getGpsStatus();
-  if (!gpsStatus.locationServicesEnabled && !resumeActiveDuty) {
-    await plugin.openLocationSettings().catch(() => ({ opened: false }));
+  const gpsStatus = await plugin.getGpsStatus?.().catch(() => null);
+  if (gpsStatus && !gpsStatus.locationServicesEnabled && !resumeActiveDuty) {
+    await plugin.openLocationSettings?.().catch(() => ({ opened: false }));
     throw new Error("GPS is turned off. Turn it on in your phone settings before starting duty.");
   }
   if (!resumeActiveDuty) {
-    try { await plugin.requestBackgroundPermission(); } catch {}
-    try { await plugin.requestReliabilityPermissions(); } catch {}
+    try { await plugin.requestBackgroundPermission?.(); } catch {}
+    try { await plugin.requestReliabilityPermissions?.(); } catch {}
   }
   const status = await plugin.isTracking().catch(() => ({ active: false }));
   if (!status.active) {

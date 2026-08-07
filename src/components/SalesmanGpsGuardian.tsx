@@ -74,7 +74,8 @@ export function SalesmanGpsGuardian({ enabled }: { enabled: boolean }) {
       try {
         const now = Date.now();
         await refreshDutyStatus(now);
-        let status = await plugin.getGpsStatus();
+        let status = await plugin.getGpsStatus?.().catch(() => null);
+        if (!status) return;
 
         // An app update or OS process reclaim can leave the saved duty flag behind
         // while the actual foreground service is gone. Reconcile against the
@@ -83,7 +84,7 @@ export function SalesmanGpsGuardian({ enabled }: { enabled: boolean }) {
         if (dutyActive && !status.trackingActive && now - lastRestartAttempt >= 30_000) {
           lastRestartAttempt = now;
           await restartActiveDutyService().catch(() => {});
-          status = await plugin.getGpsStatus();
+          status = (await plugin.getGpsStatus?.().catch(() => null)) || status;
         }
 
         if (cancelled) return;
@@ -91,7 +92,7 @@ export function SalesmanGpsGuardian({ enabled }: { enabled: boolean }) {
 
         if (dutyActive && !status.locationServicesEnabled && now - lastWarning.current >= 45_000) {
           lastWarning.current = now;
-          await plugin.showGpsOffWarning().catch(() => {});
+          await plugin.showGpsOffWarning?.().catch(() => {});
         }
 
         if (dutyActive && (!status.locationServicesEnabled || now - lastReport.current >= 60_000)) {
