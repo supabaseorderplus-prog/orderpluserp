@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api, getUser, getModulePermission, setActiveCompany, getActiveCompany } from "@/lib/api";
+import { validateRequiredCoordinates } from "@/lib/location-coordinates";
 import {
   Building2, ChevronRight, Filter, Loader2, Plus, Search, X,
   Eye, EyeOff, CreditCard, Tag, Check, KeyRound, Smartphone,
@@ -730,6 +731,14 @@ export default function PartiesPage() {
       return;
     }
 
+    const locationResult = validateRequiredCoordinates(form.latitude, form.longitude);
+    if (!locationResult.success) {
+      setFormError(locationResult.message);
+      setGpsError(locationResult.message);
+      return;
+    }
+    setGpsError("");
+
     const typeName = partyTypes.find(pt => pt.id === form.party_type_id)?.name || "";
     
     // Only require a group for RETAILER and SUPER_DEALER types. The group carries the
@@ -773,8 +782,8 @@ export default function PartiesPage() {
             portal_phone: form.portal_phone || null,
             portal_password: form.portal_password || null,
             parent_party_id: form.parent_party_id || null,
-            latitude: form.latitude ? parseFloat(form.latitude) : null,
-            longitude: form.longitude ? parseFloat(form.longitude) : null,
+            latitude: locationResult.coordinates.latitude,
+            longitude: locationResult.coordinates.longitude,
             provision_auth_user: !!form.portal_phone && !!form.portal_password,
           },
         });
@@ -1905,13 +1914,15 @@ export default function PartiesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-semibold" style={{ fontSize: "0.75rem" }}>GPS Location</span>
+                    <span className="text-emerald-400 font-semibold" style={{ fontSize: "0.75rem" }}>
+                      GPS Location <span className="text-red-500">*</span>
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={getCurrentLocation}
                     disabled={gpsLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-50 transition-all"
                     style={{ fontSize: "0.72rem", fontFamily: "inherit", border: "none", cursor: "pointer" }}
                   >
                     {gpsLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
@@ -1921,12 +1932,12 @@ export default function PartiesPage() {
                 {gpsError && <div className="text-red-400 px-1" style={{ fontSize: "0.72rem" }}>{gpsError}</div>}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={lbl}>Latitude</label>
-                    <input type="number" step="any" placeholder="e.g. 22.5726" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className={inp} style={is} />
+                    <label style={lbl}>Latitude <span className="text-red-500">*</span></label>
+                    <input type="number" step="any" min="-90" max="90" required aria-required="true" placeholder="e.g. 22.5726" value={form.latitude} onChange={(e) => { setForm({ ...form, latitude: e.target.value }); setGpsError(""); }} className={inp} style={is} />
                   </div>
                   <div>
-                    <label style={lbl}>Longitude</label>
-                    <input type="number" step="any" placeholder="e.g. 88.363892" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className={inp} style={is} />
+                    <label style={lbl}>Longitude <span className="text-red-500">*</span></label>
+                    <input type="number" step="any" min="-180" max="180" required aria-required="true" placeholder="e.g. 88.363892" value={form.longitude} onChange={(e) => { setForm({ ...form, longitude: e.target.value }); setGpsError(""); }} className={inp} style={is} />
                   </div>
                 </div>
                 {form.latitude && form.longitude && (

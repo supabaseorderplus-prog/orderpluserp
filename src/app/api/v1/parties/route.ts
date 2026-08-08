@@ -6,6 +6,7 @@ import { computeCurrentBalances } from '@/lib/party-balance'
 import { parseWalletAdjustNote, WALLET_ADJUST_NOTE_PREFIX } from '@/lib/wallet-adjust-fallback'
 import { ensureGroupsSchema, hasGroupsSchema } from '@/lib/groups'
 import { getFallbackGroup, updateFallbackGroup } from '@/lib/groups-fallback'
+import { validateRequiredCoordinates } from '@/lib/location-coordinates'
 import { createHash } from 'crypto'
 
 // Party creation (and especially COMPANY creation, which provisions a Supabase Auth
@@ -709,6 +710,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     console.log('[PARTIES POST] Received body:', JSON.stringify(body, null, 2))
 
+    const locationResult = validateRequiredCoordinates(body.latitude, body.longitude)
+    if (!locationResult.success) {
+      return NextResponse.json(
+        { success: false, message: locationResult.message },
+        { status: 400 },
+      )
+    }
+    const latitudeVal = locationResult.coordinates.latitude
+    const longitudeVal = locationResult.coordinates.longitude
+
     // Identify the calling user and resolve company scope
     const authUser = await getUserFromToken(req)
     const companyId = await resolveCompanyScope(req, authUser)
@@ -773,23 +784,6 @@ export async function POST(req: NextRequest) {
       // `address_line1` carries a NOT NULL constraint in some schemas, so it must never
       // be inserted as null. Fall back to an empty string when no address was provided.
       const addressLine1Val = addressVal ?? ''
-      const normalizeCoordinate = (value: unknown, min: number, max: number): number | null => {
-        if (value === undefined || value === null || value === '') return null
-        const numberValue = Number(value)
-        if (!Number.isFinite(numberValue) || numberValue < min || numberValue > max) return null
-        return Number(numberValue.toFixed(6))
-      }
-      const latitudeVal = normalizeCoordinate(body.latitude, -90, 90)
-      const longitudeVal = normalizeCoordinate(body.longitude, -180, 180)
-      const hasIncomingLatitude = body.latitude !== undefined && body.latitude !== null && String(body.latitude).trim() !== ''
-      const hasIncomingLongitude = body.longitude !== undefined && body.longitude !== null && String(body.longitude).trim() !== ''
-      if ((hasIncomingLatitude && latitudeVal === null) || (hasIncomingLongitude && longitudeVal === null)) {
-        return NextResponse.json(
-          { success: false, message: 'Invalid GPS coordinates. Please enter valid latitude and longitude.' },
-          { status: 400 },
-        )
-      }
-
       // Enforce one-party-per-mobile-number within the company. The mobile number
       // doubles as the portal Login ID, so the same number must not register two
       // parties in the same company. We compare on normalized digits because the
@@ -874,8 +868,8 @@ export async function POST(req: NextRequest) {
       if (hasWalletBalance) {
         insertPayload.wallet_balance = 0
       }
-      if (hasLatitude && latitudeVal !== null) insertPayload.latitude = latitudeVal
-      if (hasLongitude && longitudeVal !== null) insertPayload.longitude = longitudeVal
+      if (hasLatitude) insertPayload.latitude = latitudeVal
+      if (hasLongitude) insertPayload.longitude = longitudeVal
 
       // Auto-set parent_party_id to the company for non-COMPANY party types
       // This ensures the party appears in the company's hierarchy tree
@@ -1160,9 +1154,7 @@ export async function POST(req: NextRequest) {
         if (openingBalVal !== 0) {
           setClauses.push(`opening_balance = ${openingBalVal}`, `wallet_balance = COALESCE(wallet_balance, 0)`)
         }
-        if (latitudeVal !== null && longitudeVal !== null) {
-          setClauses.push(`latitude = ${latitudeVal}`, `longitude = ${longitudeVal}`)
-        }
+        setClauses.push(`latitude = ${latitudeVal}`, `longitude = ${longitudeVal}`)
         if (setClauses.length > 0) {
           sideEffects.push(
             supabaseAdmin
