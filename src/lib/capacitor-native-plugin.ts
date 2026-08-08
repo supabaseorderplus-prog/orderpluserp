@@ -5,6 +5,12 @@ export interface CapacitorRuntimeBridge {
   registerPlugin?: (name: string) => unknown;
 }
 
+export function isAndroidNativeRuntime(
+  capacitor: CapacitorRuntimeBridge | undefined,
+): boolean {
+  return Boolean(capacitor?.isNativePlatform?.() && capacitor.getPlatform?.() === "android");
+}
+
 /**
  * Resolve a Capacitor plugin from the Android WebView.
  *
@@ -16,10 +22,16 @@ export function resolveAndroidNativePlugin<T>(
   capacitor: CapacitorRuntimeBridge | undefined,
   name: string,
 ): T | null {
-  if (!capacitor?.isNativePlatform?.() || capacitor.getPlatform?.() !== "android") return null;
+  if (!isAndroidNativeRuntime(capacitor)) return null;
   const existing = capacitor.Plugins?.[name] as T | undefined;
   if (existing) return existing;
   return (capacitor.registerPlugin?.(name) as T | undefined) || null;
+}
+
+export function isAndroidNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const capacitor = (window as Window & { Capacitor?: CapacitorRuntimeBridge }).Capacitor;
+  return isAndroidNativeRuntime(capacitor);
 }
 
 export function getAndroidNativePlugin<T>(name: string): T | null {

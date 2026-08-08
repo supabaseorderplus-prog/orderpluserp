@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getUser, getModulePermission } from "@/lib/api";
-import { getAndroidNativePlugin } from "@/lib/capacitor-native-plugin";
+import { getAndroidNativePlugin, isAndroidNativeApp } from "@/lib/capacitor-native-plugin";
 import {
   Loader2, MapPin, Route as RouteIcon, Plus, X, Trash2, Edit2, Navigation, Map,
   AlertCircle, Crosshair, Play, ShieldCheck, Radio, CheckCircle2, LockKeyhole,
@@ -425,6 +425,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
   const [location, setLocation] = useState<(RouteMapPoint & { accuracy?: number }) | null>(null);
   const [locationError, setLocationError] = useState("");
   const [nativeProtected, setNativeProtected] = useState(false);
+  const [androidApp, setAndroidApp] = useState(false);
   const [noteStop, setNoteStop] = useState<RouteStop | null>(null);
   const [visitNote, setVisitNote] = useState("");
   const [visitSaving, setVisitSaving] = useState(false);
@@ -449,6 +450,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
   }, []);
 
   useEffect(() => { void loadFieldState(); }, [loadFieldState]);
+  useEffect(() => { setAndroidApp(isAndroidNativeApp()); }, []);
 
   const postLocation = useCallback((pos: GeolocationPosition, force = false) => {
     const next = {
@@ -789,7 +791,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
 
       {workspaceOpen && selectedRoute && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setWorkspaceOpen(false)}>
-          <div className="flex h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl bg-[#f7f8fa] shadow-2xl sm:h-[88vh] sm:rounded-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className={`flex w-full max-w-6xl flex-col overflow-hidden bg-[#f7f8fa] shadow-2xl ${androidApp ? "h-[100dvh] rounded-none sm:h-[88vh] sm:rounded-2xl" : "h-[94dvh] rounded-t-2xl sm:h-[88vh] sm:rounded-2xl"}`} onClick={(event) => event.stopPropagation()}>
             <header className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-5">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white"><Navigation className="h-5 w-5" /></div>
@@ -812,14 +814,14 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
                   <div className="border-r border-zinc-100 px-2 py-2.5"><div className="text-[0.58rem] font-bold uppercase tracking-wider text-zinc-400">Suggested drive</div><div className="mt-0.5 text-sm font-bold text-zinc-900">{(plan.distanceMeters / 1000).toFixed(1)} km</div></div>
                   <div className="px-2 py-2.5"><div className="text-[0.58rem] font-bold uppercase tracking-wider text-zinc-400">Est. travel</div><div className="mt-0.5 text-sm font-bold text-zinc-900">{formatRouteDuration(plan.durationSeconds)}</div></div>
                 </div>
-                <div className="grid min-h-0 flex-1 lg:grid-cols-[370px_1fr]">
+                <div className={`grid min-h-0 flex-1 ${androidApp ? "grid-rows-[18dvh_minmax(0,1fr)] lg:grid-rows-none lg:grid-cols-[370px_1fr]" : "lg:grid-cols-[370px_1fr]"}`}>
                   <aside className="order-2 flex min-h-0 flex-col border-t border-zinc-200 bg-white lg:order-1 lg:border-r lg:border-t-0">
-                    <div className="border-b border-zinc-100 px-4 py-3">
+                    <div className={`border-b border-zinc-100 px-4 ${androidApp ? "py-2" : "py-3"}`}>
                       <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs font-bold text-zinc-900"><Sparkles className="h-4 w-4 text-blue-600" /> Smart order <span className="font-semibold text-zinc-400">(optional)</span></div><span className="text-[0.62rem] font-semibold text-zinc-400">{plan.source === "road-network" ? "Road-time optimized" : "Distance optimized"}</span></div>
                       {run && <p className="mt-1.5 text-[0.64rem] leading-relaxed text-zinc-500">Choose any remaining party. The suggested order helps with travel time, but it never locks your next visit.</p>}
                     </div>
-                    <div className="flex-1 overflow-y-auto p-3">
-                      <div className="space-y-2">
+                    <div className={`flex-1 overflow-y-auto ${androidApp ? "p-2" : "p-3"}`}>
+                      <div className={androidApp ? "space-y-1.5" : "space-y-2"}>
                         {displayStops.map((stop, index) => {
                           const point = getStopPoint(stop);
                           const visited = (run?.visits || []).find((visit) => visit.stop_id === stop.id);
@@ -829,7 +831,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
                           const eligible = Boolean(run && distance != null && distance <= 100);
                           const stopNavigateUrl = navigationUrlFor(stop);
                           return (
-                            <div key={stop.id} className={`rounded-xl border p-3 transition ${visited ? "border-emerald-200 bg-emerald-50/70" : isChosen ? "border-blue-300 bg-blue-50 ring-1 ring-blue-100" : "border-zinc-200 bg-white"}`}>
+                            <div key={stop.id} className={`rounded-xl border transition ${androidApp ? "p-2.5" : "p-3"} ${visited ? "border-emerald-200 bg-emerald-50/70" : isChosen ? "border-blue-300 bg-blue-50 ring-1 ring-blue-100" : "border-zinc-200 bg-white"}`}>
                               <div className="flex items-start gap-3">
                                 <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-black ${visited ? "bg-emerald-600 text-white" : isChosen ? "bg-blue-600 text-white" : "bg-zinc-100 text-zinc-500"}`}>{visited ? <CheckCircle2 className="h-4 w-4" /> : index + 1}</div>
                                 <div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-1.5"><div className="truncate text-xs font-bold text-zinc-900">{stop.parties?.name || "Unknown party"}</div>{!visited && isChosen && <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[0.52rem] font-bold uppercase tracking-wide text-blue-700">Chosen next</span>}{!visited && isSmartSuggestion && !isChosen && <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[0.52rem] font-bold uppercase tracking-wide text-amber-700">Suggested</span>}</div><div className="mt-0.5 truncate text-[0.62rem] text-zinc-500">{[stop.parties?.address_line1, stop.parties?.city].filter(Boolean).join(", ") || stop.parties?.party_code}</div></div>
@@ -842,9 +844,9 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
                                   <MapPin className="h-3.5 w-3.5" /> Party GPS missing — admin update required
                                 </div>
                               ) : run ? (
-                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                  {stopNavigateUrl && <a href={stopNavigateUrl} target="_blank" rel="noopener noreferrer" onClick={() => rememberChosenStop(stop)} className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-2 py-2 text-[0.66rem] font-bold text-white hover:bg-blue-500"><Navigation className="h-3.5 w-3.5" /> Choose & Navigate</a>}
-                                  <button onClick={() => { if (eligible) { rememberChosenStop(stop); setNoteStop(stop); setVisitNote(""); } }} disabled={!eligible} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[0.66rem] font-bold ${eligible ? "bg-emerald-600 text-white hover:bg-emerald-500" : "cursor-not-allowed bg-zinc-100 text-zinc-400"} ${stopNavigateUrl ? "" : "col-span-2"}`}>
+                                <div className={`${androidApp ? "mt-1.5" : "mt-2"} grid grid-cols-2 gap-2`}>
+                                  {stopNavigateUrl && <a href={stopNavigateUrl} target="_blank" rel="noopener noreferrer" onClick={() => rememberChosenStop(stop)} className={`flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-2 text-[0.66rem] font-bold text-white hover:bg-blue-500 ${androidApp ? "py-1.5" : "py-2"}`}><Navigation className="h-3.5 w-3.5" /> Choose & Navigate</a>}
+                                  <button onClick={() => { if (eligible) { rememberChosenStop(stop); setNoteStop(stop); setVisitNote(""); } }} disabled={!eligible} className={`flex items-center justify-center gap-1.5 rounded-lg px-2 text-[0.66rem] font-bold ${androidApp ? "py-1.5" : "py-2"} ${eligible ? "bg-emerald-600 text-white hover:bg-emerald-500" : "cursor-not-allowed bg-zinc-100 text-zinc-400"} ${stopNavigateUrl ? "" : "col-span-2"}`}>
                                     {eligible ? <NotebookPen className="h-3.5 w-3.5" /> : <LocateFixed className="h-3.5 w-3.5" />}
                                     {eligible ? "Mark Visited" : distance != null ? `${Math.round(distance)} m away` : "GPS required"}
                                   </button>
@@ -856,7 +858,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
                       </div>
                     </div>
                   </aside>
-                  <section className="relative order-1 flex min-h-[42vh] flex-col overflow-hidden bg-zinc-100 lg:order-2 lg:min-h-0">
+                  <section className={`relative order-1 flex flex-col overflow-hidden bg-zinc-100 lg:order-2 lg:min-h-0 ${androidApp ? "h-[18dvh] min-h-[18dvh] max-h-[18dvh] lg:h-auto lg:max-h-none" : "min-h-[42vh]"}`}>
                     <RouteMapView stops={displayStops} origin={location} geometry={plan.geometry} visitedStopIds={visitedIds} activeStopId={chosenStop?.id || null} />
                     <div className="pointer-events-none absolute left-3 top-3 z-[800] flex flex-wrap gap-2">
                       <div className="rounded-xl border border-white/70 bg-white/95 px-3 py-2 shadow-lg backdrop-blur"><div className="flex items-center gap-1.5 text-[0.65rem] font-bold text-emerald-700"><Radio className="h-3 w-3" /> Live GPS</div><div className="mt-0.5 text-[0.58rem] text-zinc-500">Visible to admin</div></div>

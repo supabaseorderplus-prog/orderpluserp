@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolveAndroidNativePlugin } from "@/lib/capacitor-native-plugin";
+import {
+  isAndroidNativeRuntime,
+  resolveAndroidNativePlugin,
+} from "@/lib/capacitor-native-plugin";
 
 describe("resolveAndroidNativePlugin", () => {
+  it("identifies only the native Android runtime", () => {
+    expect(isAndroidNativeRuntime({ isNativePlatform: () => true, getPlatform: () => "android" })).toBe(true);
+    expect(isAndroidNativeRuntime({ isNativePlatform: () => true, getPlatform: () => "ios" })).toBe(false);
+    expect(isAndroidNativeRuntime({ isNativePlatform: () => false, getPlatform: () => "android" })).toBe(false);
+  });
+
   it("registers a custom native plugin when Java published only its header", () => {
     const proxy = { startTracking: vi.fn() };
     const registerPlugin = vi.fn(() => proxy);
