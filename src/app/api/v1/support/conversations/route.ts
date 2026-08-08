@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserFromToken, supabaseAdmin } from '@/lib/supabase-server'
 import {
-  buildWhatsAppUrl,
+  buildSupportWhatsAppMessage,
   canUseSupport,
   ensureSupportChatSchema,
   isSupportSchemaGap,
@@ -10,6 +10,7 @@ import {
   notifyCompanyAdmins,
   resolveSupportCompanyId,
 } from '@/lib/support-chat'
+import { sendWhatsAppMessage } from '@/lib/whatsapp-automation'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,12 +80,7 @@ export async function GET(req: NextRequest) {
           code: party.party_code || null,
           phone,
         } : { id: row.party_id, name: row.created_by_name, code: null, phone },
-        whatsapp_url: buildWhatsAppUrl({
-          phone,
-          ticketNumber: row.ticket_number,
-          subject: row.subject,
-          accessKey: row.access_key,
-        }),
+        whatsapp_automation_enabled: Boolean(phone),
       }
     })
 
@@ -180,7 +176,27 @@ export async function POST(req: NextRequest) {
       subject,
     })
 
-    return NextResponse.json({ success: true, data: conversation }, { status: 201 })
+    const companyContact = await loadPartyContact(companyId)
+    let whatsappDelivery: unknown = null
+    let whatsappWarning: string | null = null
+    if (companyContact?.phone) {
+      try {
+        whatsappDelivery = await sendWhatsAppMessage({
+          to: companyContact.phone,
+          message: buildSupportWhatsAppMessage({
+            ticketNumber: conversation.ticket_number,
+            subject,
+            accessKey: conversation.access_key,
+            senderName: creatorName,
+            body: initialMessage,
+          }),
+        })
+      } catch (error) {
+        whatsappWarning = error instanceof Error ? error.message : 'The WhatsApp notification could not be sent.'
+      }
+    }
+
+    return NextResponse.json({ success: true, data: conversation, whatsapp_delivery: whatsappDelivery, whatsapp_warning: whatsappWarning }, { status: 201 })
   } catch (error) {
     return apiError(error, 'Failed to start support chat')
   }

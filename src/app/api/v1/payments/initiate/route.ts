@@ -6,6 +6,7 @@ import {
   type PaymentApprovalScheme,
   type PendingPaymentPayload,
 } from '@/lib/payment-approval-links'
+import { sendWhatsAppMessage, WhatsAppAutomationError } from '@/lib/whatsapp-automation'
 
 type InvoiceSnapshot = {
   id: string
@@ -30,13 +31,6 @@ const pickPhone = (party: Record<string, unknown>) => {
     if (typeof value === 'string' && value.trim()) return value.trim()
   }
   return ''
-}
-
-const whatsappNumber = (raw: string) => {
-  const digits = raw.replace(/\D/g, '')
-  if (digits.length === 10) return `91${digits}`
-  if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`
-  return digits
 }
 
 const appBaseUrl = (req: NextRequest) => {
@@ -80,8 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Party must be verified before initiating a payment.' }, { status: 400 })
     }
     const phone = pickPhone(party as Record<string, unknown>)
-    const waNumber = whatsappNumber(phone)
-    if (!waNumber) {
+    if (!phone.replace(/\D/g, '')) {
       return NextResponse.json({ success: false, message: `Add a WhatsApp/mobile number to ${party.name || 'this party'} before initiating payment approval.` }, { status: 400 })
     }
 
@@ -185,7 +178,7 @@ export async function POST(req: NextRequest) {
       `*Review detailed PDF:*\n${pdfUrl}\n\n` +
       `*Approve payment (no login needed):*\n${approvalUrl}\n\n` +
       `The payment will be posted only after your approval. Both secure links expire immediately after approval or automatically in 72 hours.`
-    const whatsappUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`
+    const delivery = await sendWhatsAppMessage({ to: phone, message })
 
     return NextResponse.json({
       success: true,
@@ -193,16 +186,17 @@ export async function POST(req: NextRequest) {
         request_number: record.request_number,
         approval_url: approvalUrl,
         pdf_url: pdfUrl,
-        whatsapp_url: whatsappUrl,
+        whatsapp_delivery: delivery,
         expires_at: record.expires_at,
         party: { id: record.party_id, name: record.party_name, phone: record.party_phone },
       },
-      message: 'Payment approval request created. Opening WhatsApp...',
+      message: 'Payment approval request created and sent automatically on WhatsApp.',
     }, { status: 201 })
   } catch (error) {
+    const whatsappError = error instanceof WhatsAppAutomationError ? error : null
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : 'Failed to initiate payment approval.' },
-      { status: 500 },
+      { success: false, message: error instanceof Error ? error.message : 'Failed to initiate payment approval.', code: whatsappError?.code },
+      { status: whatsappError?.status || 500 },
     )
   }
 }

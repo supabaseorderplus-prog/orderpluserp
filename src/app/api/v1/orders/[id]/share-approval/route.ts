@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, getUserFromToken, resolveCompanyScope, getPartyDescendants, type AuthUser } from '@/lib/supabase-server'
 import { getScopedPartyIdsForUser } from '@/lib/party-scope'
 import { createApprovalToken, getApprovalSummaries } from '@/lib/order-approval-links'
+import { normalizeWhatsAppNumber, sendWhatsAppMessage, WhatsAppAutomationError } from '@/lib/whatsapp-automation'
 
 // Approval links live under the *minter's* party scope, so the confirmation
 // status must be read across the whole party tree (same scope as the orders
@@ -13,16 +14,6 @@ async function approvalScope(authUser: AuthUser | null, companyId: string | null
   if (scoped === null) return null
   if (companyId && !scoped.includes(companyId)) return [...scoped, companyId]
   return scoped
-}
-
-/** Normalise a raw phone into a wa.me-ready number (India default country code). */
-function normalizeWhatsappNumber(raw: string): string {
-  const digits = (raw || '').replace(/[^\d]/g, '')
-  if (!digits) return ''
-  if (digits.length === 10) return '91' + digits // bare Indian mobile
-  if (digits.length === 11 && digits.startsWith('0')) return '91' + digits.slice(1)
-  if (digits.length === 12 && digits.startsWith('91')) return digits
-  return digits // already has some country code — pass through
 }
 
 function pickPhone(party: Record<string, unknown> | null): string {
@@ -135,7 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const partyPhone = pickPhone(party as Record<string, unknown> | null)
     const companyName = (company?.name as string) || ''
 
-    if (!normalizeWhatsappNumber(partyPhone)) {
+    if (!normalizeWhatsAppNumber(partyPhone)) {
       return NextResponse.json(
         { success: false, message: `Add a WhatsApp/mobile number to ${partyName} before sending this order.` },
         { status: 400 },
@@ -168,7 +159,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const approvalUrl = `${baseUrl(req)}/approve/${record.token}`
     const pdfUrl = `${baseUrl(req)}/api/v1/public/order-approval/${record.token}/pdf`
-    const waNumber = normalizeWhatsappNumber(partyPhone)
+    const waNumber = normalizeWhatsAppNumber(partyPhone)
     const money = 'Rs ' + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(record.grand_total)
     const message = purpose === 'INVOICE'
       ? `Hello ${partyName},\n\n` +
@@ -182,9 +173,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       `*Order PDF:*\n${pdfUrl}\n\n` +
       `*Review & confirm (no login needed):*\n${approvalUrl}\n\n` +
       `Both secure links expire immediately after confirmation.`
-    const whatsappUrl = waNumber
-      ? `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`
+    const delivery = await sendWhatsAppMessage({ to: waNumber, message })
 
     return NextResponse.json({
       success: true,
@@ -192,7 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         token: record.token,
         approval_url: approvalUrl,
         pdf_url: pdfUrl,
-        whatsapp_url: whatsappUrl,
+        whatsapp_delivery: delivery,
         message,
         order_number: record.order_number,
         grand_total: record.grand_total,
@@ -203,9 +192,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     })
   } catch (err) {
+    const whatsappError = err instanceof WhatsAppAutomationError ? err : null
     return NextResponse.json(
-      { success: false, message: err instanceof Error ? err.message : 'Failed to create approval link' },
-      { status: 500 },
+      { success: false, message: err instanceof Error ? err.message : 'Failed to create approval link', code: whatsappError?.code },
+      { status: whatsappError?.status || 500 },
     )
   }
 }

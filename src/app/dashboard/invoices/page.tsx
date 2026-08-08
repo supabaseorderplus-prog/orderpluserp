@@ -83,7 +83,7 @@ interface InvoiceRequest {
 }
 
 interface ShareInvoiceData {
-  whatsapp_url: string;
+  whatsapp_delivery: { status: "sent"; to: string; message_id: string | null };
   approval_url: string;
   pdf_url: string;
   expires_at: string;
@@ -161,6 +161,7 @@ export default function InvoicesPage() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [bulkInitiating, setBulkInitiating] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [actionNotice, setActionNotice] = useState("");
 
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -305,9 +306,6 @@ export default function InvoicesPage() {
     setSharingOrderId(order.id);
     setActionError("");
 
-    // Reserve the popup during the click gesture. Once the secure token is minted
-    // asynchronously we navigate this tab to the party's WhatsApp conversation.
-    const waWindow = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
     try {
       let request = current || null;
       if (!request) {
@@ -325,14 +323,12 @@ export default function InvoicesPage() {
         `/api/v1/orders/${order.id}/share-approval`,
         { method: "POST", body: { purpose: "INVOICE", invoice_request_id: request.id } },
       );
-      if (!shared.data?.whatsapp_url) throw new Error("Could not build the WhatsApp message.");
-
-      if (waWindow && !waWindow.closed) waWindow.location.href = shared.data.whatsapp_url;
-      else if (typeof window !== "undefined") window.location.href = shared.data.whatsapp_url;
+      if (shared.data?.whatsapp_delivery?.status !== "sent") throw new Error("WhatsApp did not confirm the automatic send.");
+      setActionNotice("Invoice confirmation was sent automatically on WhatsApp.");
+      window.setTimeout(() => setActionNotice(""), 6000);
       await fetchInvoiceRequests();
     } catch (err) {
-      if (waWindow && !waWindow.closed) waWindow.close();
-      setActionError(err instanceof Error ? err.message : "Failed to open WhatsApp invoice confirmation.");
+      setActionError(err instanceof Error ? err.message : "Failed to send the WhatsApp invoice confirmation.");
     } finally {
       setSharingOrderId(null);
     }
@@ -546,7 +542,7 @@ export default function InvoicesPage() {
         title="Send item PDF and secure invoice confirmation link on WhatsApp"
       >
         {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <WhatsAppIcon className="w-3.5 h-3.5" />}
-        WhatsApp Invoice
+        Send Invoice
       </button>
     );
 
@@ -754,6 +750,12 @@ export default function InvoicesPage() {
         {actionError && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-red-700" style={{ fontSize: "0.78rem" }}>
             {actionError}
+          </div>
+        )}
+
+        {actionNotice && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-emerald-700" style={{ fontSize: "0.78rem" }}>
+            {actionNotice}
           </div>
         )}
 

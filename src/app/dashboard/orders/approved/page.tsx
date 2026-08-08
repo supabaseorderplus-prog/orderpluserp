@@ -52,7 +52,7 @@ interface ShareApprovalData {
   token: string;
   approval_url: string;
   pdf_url: string;
-  whatsapp_url: string;
+  whatsapp_delivery: { status: "sent"; to: string; message_id: string | null };
   message: string;
   company_name: string;
   party: { id: string | null; name: string; phone: string; whatsapp_number: string };
@@ -148,29 +148,22 @@ export default function ApprovedOrdersPage() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
   useVisibleInterval(fetchApprovals, 30_000);
 
-  // Mint a single-use approval link, then open the party's WhatsApp conversation
-  // (wa.me/<registered number>) directly with the confirmation message + link.
+  // Mint a single-use approval link and deliver it through the server-side
+  // WhatsApp automation service. No browser or manual Send step is involved.
   const openShare = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     if (sharingId) return;
     setSharingId(order.id);
-    const waWindow = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
     try {
       const res = await api<{ success: boolean; data: ShareApprovalData }>(
         `/api/v1/orders/${order.id}/share-approval`,
         { method: "POST", body: {} },
       );
-      const url = res?.data?.whatsapp_url;
-      if (!url) throw new Error("Could not build the WhatsApp link for this order.");
-      if (waWindow && !waWindow.closed) {
-        waWindow.location.href = url;
-      } else if (typeof window !== "undefined") {
-        window.location.href = url;
-      }
+      if (res?.data?.whatsapp_delivery?.status !== "sent") throw new Error("WhatsApp did not confirm the automatic send.");
       fetchApprovals();
+      alert("Order confirmation was sent automatically on WhatsApp.");
     } catch (err) {
-      if (waWindow && !waWindow.closed) waWindow.close();
-      alert(err instanceof Error ? err.message : "Failed to open WhatsApp");
+      alert(err instanceof Error ? err.message : "Failed to send WhatsApp automatically");
     } finally {
       setSharingId(null);
     }

@@ -110,7 +110,7 @@ interface ApprovalSummary {
 interface ShareApprovalData {
   token: string;
   approval_url: string;
-  whatsapp_url: string;
+  whatsapp_delivery: { status: "sent"; to: string; message_id: string | null };
   message: string;
   company_name: string;
   party: { id: string | null; name: string; phone: string; whatsapp_number: string };
@@ -294,34 +294,22 @@ export default function NewInvoicePage() {
       .catch(() => {});
   }, []);
 
-  // Mint a fresh single-use approval link, then jump straight into the party's
-  // WhatsApp conversation (wa.me/<registered number>) with the confirmation
-  // message + link prefilled. A tab is pre-opened inside the click gesture so the
-  // async mint below never trips the browser's popup blocker.
+  // Mint a fresh single-use approval link and deliver it through the server-side
+  // WhatsApp service. The user never has to open WhatsApp or press Send.
   const openShareApproval = useCallback(async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
     if (sharingOrderId) return;
     setSharingOrderId(order.id);
-    // Open a tab synchronously inside the click gesture so the async mint below
-    // can't be popup-blocked; we then point it at the party's WhatsApp chat.
-    const waWindow = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
     try {
       const res = await api<{ success: boolean; data: ShareApprovalData }>(
         `/api/v1/orders/${order.id}/share-approval`,
         { method: "POST", body: {} },
       );
-      const url = res?.data?.whatsapp_url;
-      if (!url) throw new Error("Could not build the WhatsApp link for this order.");
-      if (waWindow && !waWindow.closed) {
-        waWindow.location.href = url;
-      } else if (typeof window !== "undefined") {
-        // Popup blocked / in-app WebView → top-level navigation fires WhatsApp.
-        window.location.href = url;
-      }
+      if (res?.data?.whatsapp_delivery?.status !== "sent") throw new Error("WhatsApp did not confirm the automatic send.");
       fetchApprovals();
+      alert("Order confirmation was sent automatically on WhatsApp.");
     } catch (err) {
-      if (waWindow && !waWindow.closed) waWindow.close();
-      alert(err instanceof Error ? err.message : "Failed to open WhatsApp");
+      alert(err instanceof Error ? err.message : "Failed to send WhatsApp automatically");
     } finally {
       setSharingOrderId(null);
     }

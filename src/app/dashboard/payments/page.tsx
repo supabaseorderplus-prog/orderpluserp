@@ -183,6 +183,7 @@ export default function PaymentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
+  const [automationNotice, setAutomationNotice] = useState("");
   const [parties, setParties] = useState<Party[]>([]);
   const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [pendingDeleteTarget, setPendingDeleteTarget] = useState<PendingPayment | null>(null);
@@ -584,7 +585,7 @@ export default function PaymentsPage() {
 	      setCreating(true);
 	      try {
 	        const adjustments = Object.entries(selectedAdj).filter(([, amt]) => amt > 0).map(([invoiceId, amount]) => ({ invoiceId, amount }));
-	        const result = await api<{ success: boolean; data: { whatsapp_url: string; request_number: string } }>("/api/v1/payments/initiate", {
+	        const result = await api<{ success: boolean; data: { whatsapp_delivery: { status: "sent" }; request_number: string } }>("/api/v1/payments/initiate", {
 	          method: "POST",
 	          body: {
 	            ...form,
@@ -608,7 +609,8 @@ export default function PaymentsPage() {
 	        setProofFile(null);
 	        setProofPreview(null);
 	        setSelectedSchemeIds([]);
-	        window.location.assign(result.data.whatsapp_url);
+	        setAutomationNotice(`${result.data.request_number} was sent automatically on WhatsApp.`);
+	        window.setTimeout(() => setAutomationNotice(""), 6000);
 	      } catch (err) { setFormError(err instanceof Error ? err.message : "Failed to initiate payment approval"); }
 	      finally { setCreating(false); }
 	    }
@@ -930,6 +932,12 @@ export default function PaymentsPage() {
             </p>
         </div>
       </div>
+
+      {automationNotice && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700" style={{ fontSize: "0.8rem" }}>
+          {automationNotice}
+        </div>
+      )}
 
       {/* Summary card (outstanding only) */}
       {tab === "outstanding" && !outstandingLoading && validOutstanding.length > 0 && (
@@ -2364,7 +2372,7 @@ export default function PaymentsPage() {
                 </div>
                 <div>
                   <h2 className="text-zinc-900 font-bold" style={{ ...css, fontSize: "1.05rem" }}>Collect Payment</h2>
-                  <p className="text-zinc-500" style={{ fontSize: "0.72rem", margin: 0 }}>Create a secure party approval request, then share it on WhatsApp</p>
+                  <p className="text-zinc-500" style={{ fontSize: "0.72rem", margin: 0 }}>Create a secure approval request and send it automatically on WhatsApp</p>
                 </div>
               </div>
               <button onClick={() => { setShowCreate(false); setLockedPartyId(null); }} className="text-zinc-400 hover:text-zinc-900 p-1"
@@ -2696,7 +2704,7 @@ export default function PaymentsPage() {
                   className="px-6 py-2 rounded-lg bg-amber-500 text-zinc-900 hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2"
                   style={{ fontSize: "0.8rem", fontFamily: "inherit", border: "none", boxShadow: "none", cursor: "pointer" }}>
                   {(creating || schemeCheckLoading) && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {schemeCheckLoading ? "Checking schemes…" : creating ? "Creating approval…" : "Initiate & Open WhatsApp"}
+                  {schemeCheckLoading ? "Checking schemes…" : creating ? "Creating & sending…" : "Initiate & Send Automatically"}
                 </button>
               </div>
             </form>

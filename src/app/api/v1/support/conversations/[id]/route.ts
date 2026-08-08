@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserFromToken, supabaseAdmin } from '@/lib/supabase-server'
-import { buildWhatsAppUrl, canUseSupport, isSupportAdmin, loadPartyContact, resolveSupportCompanyId } from '@/lib/support-chat'
+import { canUseSupport, isSupportAdmin, loadPartyContact, resolveSupportCompanyId } from '@/lib/support-chat'
 
 async function authorizedConversation(req: NextRequest, id: string) {
   const user = await getUserFromToken(req)
@@ -42,12 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ...access.conversation,
         party,
         messages: messages || [],
-        whatsapp_url: buildWhatsAppUrl({
-          phone,
-          ticketNumber: access.conversation.ticket_number,
-          subject: access.conversation.subject,
-          accessKey: access.conversation.access_key,
-        }),
+        whatsapp_automation_enabled: Boolean(phone),
       },
     })
   } catch (error) {

@@ -147,6 +147,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
       { label: "Users", href: "/dashboard/users", icon: Users, module: "users" },
       { label: "Security", href: "/dashboard/security", icon: Shield, module: "security" },
       { label: "Control Panel", href: "/dashboard/control-panel", icon: Settings, module: "control_panel" },
+      { label: "WhatsApp Automation", href: "/dashboard/whatsapp", icon: MessageCircle, module: "control_panel" },
       { label: "Support Chat", href: "/dashboard/support", icon: MessageCircle, module: "support_chat" },
     ],
   },

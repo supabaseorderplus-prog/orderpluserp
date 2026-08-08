@@ -139,22 +139,22 @@ export async function loadPartyContact(partyId: string | null) {
   }
 }
 
-export function buildWhatsAppUrl(input: {
-  phone: string | null
+export function buildSupportWhatsAppMessage(input: {
   ticketNumber: string
   subject: string
   accessKey: string
+  body?: string
+  senderName?: string
 }) {
-  if (!input.phone) return null
   const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '')
   const deepLink = site ? `${site}/dashboard/support?ticket=${encodeURIComponent(input.ticketNumber)}` : ''
-  const message = [
-    `Hello, I want to continue support ticket ${input.ticketNumber} on WhatsApp.`,
+  return [
+    `HomeTech support ticket ${input.ticketNumber}`,
     `Subject: ${input.subject}`,
+    input.senderName && input.body ? `${input.senderName}: ${input.body}` : input.body || '',
     deepLink ? `Open secure chat: ${deepLink}` : '',
     `Reference: ${input.accessKey.slice(0, 8)}`,
   ].filter(Boolean).join('\n')
-  return `https://wa.me/${input.phone}?text=${encodeURIComponent(message)}`
 }
 
 export async function notifyCompanyAdmins(input: {
