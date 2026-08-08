@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken, resolveCompanyScope } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission, resolveCompanyScope } from '@/lib/supabase-server'
 import {
   deleteFallbackVendor,
   getFallbackVendorBalances,
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params
     const { authUser, companyId } = await resolveScope(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    if (authUser.role === 'SALESMAN') return NextResponse.json({ success: false, message: 'Vendors are not available for salesman accounts' }, { status: 403 })
+    if (!await hasModulePermission(authUser, 'vendors', 'can_view')) return NextResponse.json({ success: false, message: 'You do not have permission to view vendors' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     const vendor = await loadOwnedVendor(id, companyId)
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params
     const { authUser, companyId } = await resolveScope(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    if (authUser.role === 'SALESMAN') return NextResponse.json({ success: false, message: 'Vendors are not available for salesman accounts' }, { status: 403 })
+    if (!await hasModulePermission(authUser, 'vendors', 'can_edit')) return NextResponse.json({ success: false, message: 'You do not have permission to edit vendors' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     const existing = await loadOwnedVendor(id, companyId)
@@ -207,7 +207,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params
     const { authUser, companyId } = await resolveScope(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    if (authUser.role === 'SALESMAN') return NextResponse.json({ success: false, message: 'Vendors are not available for salesman accounts' }, { status: 403 })
+    if (!await hasModulePermission(authUser, 'vendors', 'can_delete')) return NextResponse.json({ success: false, message: 'You do not have permission to delete vendors' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     const existing = await loadOwnedVendor(id, companyId)

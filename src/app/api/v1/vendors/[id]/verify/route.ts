@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken, resolveCompanyScope } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission, resolveCompanyScope } from '@/lib/supabase-server'
 import { ensureVendorsSchema, getFallbackVendorById, isMissingColumnError, isMissingTableError, updateFallbackVendor } from '@/lib/vendors'
 
 export const dynamic = 'force-dynamic'
@@ -15,14 +15,14 @@ async function resolveScope(req: NextRequest): Promise<{ authUser: Awaited<Retur
   return { authUser, companyId }
 }
 
-// Mark a vendor verified / unverified. Admin-only, fail-closed on company scope.
+// Mark a vendor verified / unverified, fail-closed on company scope.
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const { authUser, companyId } = await resolveScope(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(authUser.role)) {
-      return NextResponse.json({ success: false, message: 'Only admins can verify vendors' }, { status: 403 })
+    if (!await hasModulePermission(authUser, 'vendors', 'can_approve')) {
+      return NextResponse.json({ success: false, message: 'You do not have permission to approve vendors' }, { status: 403 })
     }
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 

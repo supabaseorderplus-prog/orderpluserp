@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken, resolveCompanyScope } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission, resolveCompanyScope } from '@/lib/supabase-server'
 import { getVendorBalances, isMissingTableError, type VendorRow } from '@/lib/vendors'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const { authUser, companyId } = await resolveScope(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
-    if (authUser.role === 'SALESMAN') return NextResponse.json({ success: false, message: 'Vendors are not available for salesman accounts' }, { status: 403 })
+    if (!await hasModulePermission(authUser, 'vendors', 'can_view')) return NextResponse.json({ success: false, message: 'You do not have permission to view vendor balances' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     const { data, error } = await supabaseAdmin

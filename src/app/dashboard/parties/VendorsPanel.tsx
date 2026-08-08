@@ -6,16 +6,17 @@ import {
   ArrowUpRight, Database, ShieldCheck, Shield, Check,
 } from "lucide-react";
 import { getUser } from "@/lib/api";
+import type { ModulePermission } from "@/lib/api";
 import { Vendor, vendorAuthHeaders, inr, balanceLabel } from "./vendor-types";
 import VendorFormModal from "./VendorFormModal";
 import VendorLedgerModal from "./VendorLedgerModal";
 
 interface VendorsPanelProps {
-  canCreate: boolean;
+  permissions: ModulePermission;
   companyId: string | null;
 }
 
-export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps) {
+export default function VendorsPanel({ permissions, companyId }: VendorsPanelProps) {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,7 +27,7 @@ export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps
   const currentUser = getUser();
   const isAdminUser = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
   const isSalesman = currentUser?.role === "SALESMAN";
-  const showTabs = isAdminUser && !isSalesman;
+  const showTabs = (isAdminUser || permissions.can_approve) && !isSalesman;
   const [verificationTab, setVerificationTab] = useState<"verified" | "unverified">("verified");
   const [verificationAvailable, setVerificationAvailable] = useState(true);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
@@ -176,7 +177,7 @@ export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps
             style={{ fontSize: "0.8rem" }}
           />
         </div>
-        {canCreate && (
+        {permissions.can_create && (
           <button onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-500 text-zinc-900 hover:bg-amber-600 transition-all"
             style={{ fontSize: "0.8rem", border: "none", cursor: "pointer" }}>
@@ -231,7 +232,7 @@ export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps
                   <p className={`font-semibold ${balTone}`} style={{ fontSize: "0.85rem", margin: 0 }}>{inr(bal)}</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  {showTabs && verificationAvailable && v.is_verified === false && (
+                  {permissions.can_approve && showTabs && verificationAvailable && v.is_verified === false && (
                     <button
                       onClick={() => handleVerify(v)}
                       disabled={verifyingId === v.id}
@@ -246,12 +247,12 @@ export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps
                   <button onClick={() => setLedgerVendor(v)} title="Ledger" className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-600 hover:bg-amber-500/10" style={{ background: "none", border: "none", cursor: "pointer" }}>
                     <BookOpen className="w-4 h-4" />
                   </button>
-                  {canCreate && (
+                  {permissions.can_edit && (
                     <button onClick={() => { setEditing(v); setShowForm(true); }} title="Edit" className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-black/5" style={{ background: "none", border: "none", cursor: "pointer" }}>
                       <Pencil className="w-4 h-4" />
                     </button>
                   )}
-                  {canCreate && (
+                  {permissions.can_delete && (
                     <button onClick={() => handleDelete(v)} disabled={deletingId === v.id} title="Delete" className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-500/10 disabled:opacity-40" style={{ background: "none", border: "none", cursor: "pointer" }}>
                       {deletingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
@@ -265,7 +266,12 @@ export default function VendorsPanel({ canCreate, companyId }: VendorsPanelProps
 
       <VendorFormModal open={showForm} editing={editing} onClose={() => { setShowForm(false); setEditing(null); }} onSaved={handleSaved} />
       {ledgerVendor && (
-        <VendorLedgerModal vendor={ledgerVendor} onClose={() => setLedgerVendor(null)} onBalanceChange={updateBalanceInList} />
+        <VendorLedgerModal
+          vendor={ledgerVendor}
+          canCreateEntry={permissions.can_create}
+          onClose={() => setLedgerVendor(null)}
+          onBalanceChange={updateBalanceInList}
+        />
       )}
     </div>
   );

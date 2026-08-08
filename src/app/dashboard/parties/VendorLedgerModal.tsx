@@ -14,6 +14,7 @@ const lbl: React.CSSProperties = { fontSize: "0.7rem", display: "block", marginB
 
 interface VendorLedgerModalProps {
   vendor: Vendor;
+  canCreateEntry: boolean;
   onClose: () => void;
   onBalanceChange: (vendorId: string, balance: number) => void;
 }
@@ -24,7 +25,7 @@ const txnMeta: Record<VendorTxnType, { label: string; Icon: typeof FileText; ton
   ADJUSTMENT: { label: "Adjustment", Icon: SlidersHorizontal, tone: "text-amber-500 bg-amber-500/10" },
 };
 
-export default function VendorLedgerModal({ vendor, onClose, onBalanceChange }: VendorLedgerModalProps) {
+export default function VendorLedgerModal({ vendor, canCreateEntry, onClose, onBalanceChange }: VendorLedgerModalProps) {
   const [txns, setTxns] = useState<VendorTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(vendor.current_balance ?? vendor.opening_balance);
@@ -130,15 +131,17 @@ export default function VendorLedgerModal({ vendor, onClose, onBalanceChange }: 
               <p style={{ fontSize: "0.68rem", color: "#a1a1aa", margin: 0 }}>{bl.text}</p>
               <p className={`font-bold ${balTone}`} style={{ fontSize: "1.4rem", margin: "2px 0 0" }}>{inr(balance)}</p>
             </div>
-            <button onClick={() => { setShowAdd((s) => !s); setError(""); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-zinc-900 hover:bg-amber-600 transition-all"
-              style={{ fontSize: "0.78rem", border: "none", cursor: "pointer" }}>
-              <Plus className="w-4 h-4" /> Add Entry
-            </button>
+            {canCreateEntry && (
+              <button onClick={() => { setShowAdd((s) => !s); setError(""); }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-zinc-900 hover:bg-amber-600 transition-all"
+                style={{ fontSize: "0.78rem", border: "none", cursor: "pointer" }}>
+                <Plus className="w-4 h-4" /> Add Entry
+              </button>
+            )}
           </div>
 
           {/* Add transaction form */}
-          {showAdd && (
+          {canCreateEntry && showAdd && (
             <form onSubmit={addTransaction} className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4 space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 {(["BILL", "PAYMENT", "ADJUSTMENT"] as VendorTxnType[]).map((t) => {

@@ -383,10 +383,11 @@ export interface ModulePermission {
   can_create: boolean;
   can_edit: boolean;
   can_delete: boolean;
+  can_approve: boolean;
 }
 
-const FULL_MODULE_PERMISSION: ModulePermission = { can_view: true, can_create: true, can_edit: true, can_delete: true };
-const VIEW_ONLY_MODULE_PERMISSION: ModulePermission = { can_view: true, can_create: false, can_edit: false, can_delete: false };
+const FULL_MODULE_PERMISSION: ModulePermission = { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true };
+const VIEW_ONLY_MODULE_PERMISSION: ModulePermission = { can_view: true, can_create: false, can_edit: false, can_delete: false, can_approve: false };
 
 /**
  * Resolve the current user's CRUD permissions for a given module.
@@ -421,6 +422,7 @@ export async function getModulePermission(module: string): Promise<ModulePermiss
       can_create: !!match.can_create,
       can_edit: !!match.can_edit,
       can_delete: !!match.can_delete,
+      can_approve: !!match.can_approve,
     };
   } catch {
     return { ...VIEW_ONLY_MODULE_PERMISSION };

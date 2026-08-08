@@ -5,6 +5,7 @@ const ALL_MODULES = [
   "dashboard",
   "orders",
   "parties",
+  "vendors",
   "invoices",
   "procurement",
   "delivery_lots",

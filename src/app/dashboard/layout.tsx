@@ -90,7 +90,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     label: "Vendors",
     icon: Truck,
     items: [
-      { label: "Vendors", href: "/dashboard/vendors", icon: Truck, module: "parties" },
+      { label: "Vendors", href: "/dashboard/vendors", icon: Truck, module: "vendors" },
     ],
   },
   {

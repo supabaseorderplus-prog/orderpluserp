@@ -216,6 +216,39 @@ export interface AuthUser {
   party_id: string | null
 }
 
+export type ModulePermissionField = 'can_view' | 'can_create' | 'can_edit' | 'can_delete' | 'can_approve'
+
+/** Server-side permission check for API routes. Admin roles retain full access. */
+export async function hasModulePermission(
+  user: AuthUser,
+  module: string,
+  field: ModulePermissionField,
+): Promise<boolean> {
+  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') return true
+
+  let roleId = user.role_id
+  if (!roleId) {
+    const { data: role } = await supabaseAdmin
+      .from('roles')
+      .select('id')
+      .eq('name', user.role)
+      .maybeSingle()
+    roleId = role?.id || null
+  }
+  if (!roleId) return false
+
+  const { data, error } = await supabaseAdmin
+    .from('permissions')
+    .select('can_view, can_create, can_edit, can_delete, can_approve')
+    .eq('role_id', roleId)
+    .eq('module', module)
+    .eq('status', 'ACTIVE')
+    .limit(1)
+
+  if (error || !data?.[0]) return false
+  return (data[0] as Record<ModulePermissionField, boolean>)[field] === true
+}
+
 interface PublicAppUserProfile {
   id: string
   name: string | null

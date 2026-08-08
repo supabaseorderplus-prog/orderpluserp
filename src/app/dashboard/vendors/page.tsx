@@ -2,18 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { Truck } from "lucide-react";
-import { getActiveCompany, getModulePermission } from "@/lib/api";
+import { getActiveCompany, getModulePermission, type ModulePermission } from "@/lib/api";
 import VendorsPanel from "@/app/dashboard/parties/VendorsPanel";
 
+const VIEW_ONLY: ModulePermission = {
+  can_view: true,
+  can_create: false,
+  can_edit: false,
+  can_delete: false,
+  can_approve: false,
+};
+
 export default function VendorsPage() {
-  const [canCreate, setCanCreate] = useState(false);
+  const [permissions, setPermissions] = useState<ModulePermission>(VIEW_ONLY);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
     const syncCompany = () => setCompanyId(getActiveCompany().id);
     syncCompany();
     window.addEventListener("activeCompanyChanged", syncCompany);
-    void getModulePermission("parties").then((permission) => setCanCreate(permission.can_create));
+    void getModulePermission("vendors").then(setPermissions);
     return () => window.removeEventListener("activeCompanyChanged", syncCompany);
   }, []);
 
@@ -29,7 +37,7 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      <VendorsPanel canCreate={canCreate} companyId={companyId} />
+      <VendorsPanel permissions={permissions} companyId={companyId} />
     </div>
   );
 }

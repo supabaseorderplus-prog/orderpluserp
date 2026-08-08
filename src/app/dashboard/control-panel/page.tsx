@@ -42,6 +42,7 @@ import {
 const MODULE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   dashboard:      { label: "Dashboard",      icon: LayoutDashboard, color: "text-blue-400" },
   parties:        { label: "Parties",        icon: Building2,       color: "text-amber-400" },
+  vendors:        { label: "Vendors",        icon: Truck,           color: "text-orange-400" },
   invoices:       { label: "Invoices",       icon: ClipboardList,   color: "text-green-400" },
   procurement:    { label: "Procurement",    icon: ShoppingCart,    color: "text-lime-400" },
   delivery_lots:  { label: "Delivery Lots",  icon: PackageCheck,    color: "text-cyan-400" },

@@ -215,7 +215,9 @@ export default function PartiesPage() {
 
   // Permissions
   const [perms, setPerms] = useState({ can_view: true, can_create: false, can_edit: false, can_delete: false });
+  const [vendorPerms, setVendorPerms] = useState({ can_view: false, can_create: false, can_edit: false, can_delete: false, can_approve: false });
   useEffect(() => { getModulePermission("parties").then(setPerms); }, []);
+  useEffect(() => { getModulePermission("vendors").then(setVendorPerms); }, []);
 
   // Load companies list when super admin has no company selected
   useEffect(() => {
@@ -1086,8 +1088,8 @@ export default function PartiesPage() {
         )}
       </div>
 
-      {/* ── Parties / Vendors toggle (Vendors module hidden from salesmen) ── */}
-      {!noCompanyScope && !isSalesman && (
+      {/* ── Parties / Vendors toggle ── */}
+      {!noCompanyScope && vendorPerms.can_view && (
         <div className="flex gap-1 mb-4 lg:mb-6 p-1 rounded-lg bg-black/[0.04] border border-black/[0.06]" style={{ width: "fit-content" }}>
           <button
             onClick={() => setViewMode("parties")}
@@ -1106,10 +1108,10 @@ export default function PartiesPage() {
         </div>
       )}
 
-      {/* ── Vendors module (salesmen have no access) ── */}
-      {!noCompanyScope && !isSalesman && viewMode === "vendors" && (
+      {/* ── Vendors module ── */}
+      {!noCompanyScope && vendorPerms.can_view && viewMode === "vendors" && (
         <VendorsPanel
-          canCreate={!!perms.can_create}
+          permissions={vendorPerms}
           companyId={typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null}
         />
       )}

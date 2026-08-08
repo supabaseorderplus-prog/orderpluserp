@@ -387,6 +387,7 @@ export default function VendorsTreasury() {
       {ledgerVendor && (
         <VendorLedgerModal
           vendor={ledgerVendor}
+          canCreateEntry={canManage}
           onClose={() => { setLedgerVendor(null); load(); }}
           onBalanceChange={updateBalanceInList}
         />
