@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import { normalizeCoordinates } from "@/lib/location-coordinates";
 import { belongsToSelectedTrackingUser, newestTrackingLocation } from "@/lib/tracking-map-visibility";
-import { buildVerifiedTrail, trackingDistanceMeters } from "@/lib/tracking-integrity";
+import { buildVerifiedTrail } from "@/lib/tracking-integrity";
 import { istToday } from "@/lib/datetime";
 import { TrackingAnalysisPanel } from "@/components/TrackingAnalysisPanel";
 import {
@@ -575,7 +575,7 @@ export default function TrackingPage() {
 
   const trailDistKm = verifiedTrail.distanceKm;
 
-  const routePartyPinsAll = plannedStops.flatMap((stop, index) => {
+  const routePartyPins = plannedStops.flatMap((stop, index) => {
     const party = stop.parties;
     const coordinates = party
       ? normalizeCoordinates(party.latitude, party.longitude)
@@ -592,15 +592,6 @@ export default function TrackingPage() {
       visited: Boolean(routeRun?.visits.some((visit) => visit.stop_id === stop.id)),
     }];
   });
-  const selectedMapLocation = selected
-    ? newestTrackingLocation(liveLocations[selected.id], selected.latest_location)
-    : null;
-  // A malformed party coordinate must never zoom the operational map out by
-  // hundreds of kilometres. A daily stop beyond 75 km from the user's verified
-  // area is treated as location data needing correction rather than map input.
-  const routePartyPins = selectedMapLocation
-    ? routePartyPinsAll.filter((pin) => trackingDistanceMeters(selectedMapLocation, pin) <= 75_000)
-    : routePartyPinsAll;
   const gpsProblems = salesmen.filter((salesman) => gpsProblemLabel(salesman) !== null);
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -771,6 +762,7 @@ export default function TrackingPage() {
             selectedUserId={selected?.id ?? null}
             trail={mapTrail}
             routeStops={routePartyPins}
+            routeStopTotal={routeRun?.total_stops ?? plannedStops.length}
             onUserClick={(id) => {
               const s = salesmen.find((sm) => sm.id === id);
               if (s) setSelected(s);

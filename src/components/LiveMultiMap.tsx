@@ -51,6 +51,7 @@ interface Props {
   selectedUserId?: string | null;
   trail?: TrailPoint[];
   routeStops?: RouteStopPin[];
+  routeStopTotal?: number;
   onUserClick?: (userId: string) => void;
 }
 
@@ -193,6 +194,7 @@ export default function LiveMultiMap({
   selectedUserId,
   trail = [],
   routeStops = [],
+  routeStopTotal = routeStops.length,
   onUserClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1005,6 +1007,21 @@ export default function LiveMultiMap({
           backdrop-filter: blur(4px);
         }
       `}</style>
+      {selectedUserId && routeStopTotal > 0 && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-xl border border-black/10 bg-white/95 px-3 py-2 shadow-lg shadow-black/10 backdrop-blur">
+          <div className="flex items-center justify-center gap-3 text-[0.62rem] font-bold text-zinc-700">
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-emerald-600" />Visited</span>
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-blue-600" />Next</span>
+            <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-amber-500" />Pending</span>
+          </div>
+          <div className="mt-1 text-center text-[0.58rem] font-semibold text-zinc-500">
+            {routeStops.length}/{routeStopTotal} party locations mapped
+            {routeStopTotal > routeStops.length
+              ? ` · ${routeStopTotal - routeStops.length} missing GPS coordinates`
+              : ""}
+          </div>
+        </div>
+      )}
       {focusLocation && (
         <div className="absolute bottom-3 left-3 z-[1000] w-[min(330px,calc(100%-1.5rem))] rounded-xl border border-black/10 bg-white/95 p-2.5 text-zinc-900 shadow-lg shadow-black/10 backdrop-blur">
           <div className="mb-1.5 flex items-center justify-between gap-2">
