@@ -50,6 +50,7 @@ class LocationTrackingService : Service() {
         const val KEY_START_MS    = "start_ms"
         const val KEY_DISTANCE_KM = "distance_km"
         const val KEY_PING_QUEUE  = "ping_queue"
+        const val KEY_SERVICE_HEARTBEAT_MS = "service_heartbeat_ms"
 
         private const val CHANNEL_ID = "hometech_tracking_channel"
         private const val NOTIF_ID   = 2001
@@ -71,6 +72,8 @@ class LocationTrackingService : Service() {
         // showing the user as "live" instead of falsely flagging "app may be closed".
         // Kept well under the dashboard's 5-min threshold without flooding the trail.
         private const val HEARTBEAT_MS        = 10_000L
+        private const val SERVICE_HEARTBEAT_MS = 15_000L
+        private const val SERVICE_STALE_MS     = 45_000L
 
         private val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
@@ -86,6 +89,14 @@ class LocationTrackingService : Service() {
                 prefs.getLong(KEY_START_MS, 0L) > 0L
             prefs.edit().putBoolean(KEY_DUTY_ACTIVE, legacyDuty).commit()
             return legacyDuty
+        }
+
+        /** Cross-process service health. The Activity and tracking service run in
+         *  different processes, so a static boolean cannot report real state. */
+        fun isServiceHealthy(prefs: SharedPreferences, nowMs: Long = System.currentTimeMillis()): Boolean {
+            if (!hasActiveDuty(prefs)) return false
+            val heartbeatMs = prefs.getLong(KEY_SERVICE_HEARTBEAT_MS, 0L)
+            return heartbeatMs > 0L && nowMs - heartbeatMs <= SERVICE_STALE_MS
         }
     }
 
@@ -115,6 +126,9 @@ class LocationTrackingService : Service() {
         loadPendingQueue()
         netExecutor.scheduleWithFixedDelay({ flushQueue() }, 30, 30, TimeUnit.SECONDS)
         netExecutor.scheduleWithFixedDelay({ heartbeatIfIdle() }, 5, 5, TimeUnit.SECONDS)
+        netExecutor.scheduleWithFixedDelay({
+            if (isRunning) markServiceAlive()
+        }, 0, SERVICE_HEARTBEAT_MS, TimeUnit.MILLISECONDS)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -190,6 +204,7 @@ class LocationTrackingService : Service() {
 
         startLocationUpdates()
         isRunning = true
+        markServiceAlive()
         // Arm the watchdog so the service is revived if the OS/OEM later kills it.
         TrackingWatchdogReceiver.schedule(this)
         Log.i(TAG, "Tracking started (interval=${INTERVAL_MS}ms, minDist=${MIN_DIST_FILTER_M}m)")
@@ -205,6 +220,7 @@ class LocationTrackingService : Service() {
             .remove(KEY_TOKEN).remove(KEY_COMPANY).remove(KEY_BASE_URL)
             .remove(KEY_REFRESH_TOKEN)
             .remove(KEY_START_MS).remove(KEY_DISTANCE_KM).remove(KEY_PING_QUEUE)
+            .remove(KEY_SERVICE_HEARTBEAT_MS)
             .commit()
         TrackingWatchdogReceiver.cancel(this)
         if (::locationCallback.isInitialized) {
@@ -242,6 +258,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun onLocationReceived(loc: Location) {
+        markServiceAlive()
         if (!loc.hasAccuracy() || loc.accuracy > MAX_ACCURACY_M) {
             Log.d(TAG, "Ignoring weak GPS fix (accuracy=${loc.accuracy}m)")
             return
@@ -310,6 +327,7 @@ class LocationTrackingService : Service() {
      *  which would make the dashboard show a growing "no signal" gap. Re-send the
      *  last known fix so they stay "live" until duty actually ends. */
     private fun heartbeatIfIdle() {
+        markServiceAlive()
         val loc = lastLocation ?: return
         if (System.currentTimeMillis() - lastPingMs < HEARTBEAT_MS - 5_000L) return
         val payload = JSONObject().apply {
@@ -438,6 +456,12 @@ class LocationTrackingService : Service() {
         } catch (_: Exception) {}
     }
 
+    private fun markServiceAlive() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            .putLong(KEY_SERVICE_HEARTBEAT_MS, System.currentTimeMillis())
+            .apply()
+    }
+
     private fun loadPendingQueue() {
         try {
             val raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -524,6 +548,9 @@ class LocationTrackingService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            .putLong(KEY_SERVICE_HEARTBEAT_MS, 0L)
+            .commit()
         if (::locationCallback.isInitialized)
             fusedLocationClient.removeLocationUpdates(locationCallback)
         persistQueue()

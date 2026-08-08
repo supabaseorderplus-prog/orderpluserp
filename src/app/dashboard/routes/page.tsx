@@ -353,6 +353,8 @@ type RouteNativeLocationPlugin = {
   getGpsStatus: () => Promise<{
     locationServicesEnabled: boolean;
     fineLocationGranted: boolean;
+    backgroundLocationGranted: boolean;
+    batteryOptimizationDisabled: boolean;
     trackingActive: boolean;
   }>;
   openLocationSettings: () => Promise<{ opened: boolean }>;
@@ -373,9 +375,11 @@ async function startPersistentAndroidTracking(
     await plugin.openLocationSettings?.().catch(() => ({ opened: false }));
     throw new Error("GPS is turned off. Turn it on in your phone settings before starting duty.");
   }
-  if (!resumeActiveDuty) {
-    try { await plugin.requestBackgroundPermission?.(); } catch {}
-    try { await plugin.requestReliabilityPermissions?.(); } catch {}
+  if (gpsStatus && !gpsStatus.backgroundLocationGranted) {
+    if (!resumeActiveDuty) {
+      await plugin.requestBackgroundPermission?.().catch(() => ({ granted: false }));
+    }
+    throw new Error('Set Android Location permission to "Allow all the time", then return and start duty again.');
   }
   const status = await plugin.isTracking().catch(() => ({ active: false }));
   if (!status.active) {
@@ -386,6 +390,11 @@ async function startPersistentAndroidTracking(
       userId,
       resumeActiveDuty,
     });
+    // Start GPS first; opening battery settings before this call makes Android
+    // treat the service launch as a forbidden background start.
+    if (!resumeActiveDuty && gpsStatus && !gpsStatus.batteryOptimizationDisabled) {
+      await plugin.requestReliabilityPermissions?.().catch(() => null);
+    }
   }
   return true;
 }

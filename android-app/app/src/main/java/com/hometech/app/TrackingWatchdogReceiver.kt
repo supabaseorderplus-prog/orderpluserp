@@ -81,7 +81,7 @@ class TrackingWatchdogReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!LocationTrackingService.isRunning) {
+        if (!LocationTrackingService.isServiceHealthy(prefs)) {
             Log.i(TAG, "Watchdog → service not running, relaunching")
             try {
                 ContextCompat.startForegroundService(

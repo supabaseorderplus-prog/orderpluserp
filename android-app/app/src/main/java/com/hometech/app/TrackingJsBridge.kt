@@ -1,6 +1,7 @@
 package com.hometech.app
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +9,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.util.Log
 import android.webkit.JavascriptInterface
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
 
@@ -30,16 +32,30 @@ class TrackingJsBridge(private val context: Context) {
      * optsJson = { authToken, refreshToken, companyId, userId }
      */
     @JavascriptInterface
-    fun startTracking(optsJson: String) {
-        try {
+    fun startTracking(optsJson: String): String {
+        return try {
             val opts      = JSONObject(optsJson)
             val authToken = opts.optString("authToken", "")
             val refreshToken = opts.optString("refreshToken", "")
             val companyId = opts.optString("companyId", "")
+            val resumeActiveDuty = opts.optBoolean("resumeActiveDuty", false)
 
             if (authToken.isEmpty()) {
-                Log.w(TAG, "startTracking: no authToken in opts — ignoring")
-                return
+                return trackingResult(false, "A valid login is required before duty tracking can start.")
+            }
+            if (!hasFineLocationPermission()) {
+                return trackingResult(false, "Allow precise location before starting duty.")
+            }
+            if (!hasBackgroundLocationPermission()) {
+                // Android 11+ removed "Allow all the time" from the runtime
+                // dialog. A deliberate Start Duty tap takes the user to the app
+                // permission page where that setting is available.
+                if (!resumeActiveDuty) openAppLocationPermissionSettings()
+                return trackingResult(
+                    false,
+                    "Set Location permission to Allow all the time, then return and start duty again.",
+                    requiresBackgroundPermission = true
+                )
             }
 
             // Persist the duty decision synchronously before launching the
@@ -57,8 +73,10 @@ class TrackingJsBridge(private val context: Context) {
             }
             ContextCompat.startForegroundService(context, intent)
             Log.i(TAG, "startTracking: foreground service started")
+            trackingResult(true)
         } catch (e: Exception) {
             Log.e(TAG, "startTracking error: ${e.message}")
+            trackingResult(false, "Android could not start duty tracking: ${e.message ?: "unknown error"}")
         }
     }
 
@@ -81,7 +99,16 @@ class TrackingJsBridge(private val context: Context) {
 
     /** Returns true if the tracking service is currently running. */
     @JavascriptInterface
-    fun isTracking(): Boolean = LocationTrackingService.isRunning
+    fun isTracking(): Boolean {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            ?: return false
+        @Suppress("DEPRECATION")
+        return manager.getRunningServices(Int.MAX_VALUE).any {
+            it.service.packageName == context.packageName &&
+                it.service.className == LocationTrackingService::class.java.name &&
+                it.foreground
+        }
+    }
 
     /** Fresh tokens rotated by the background service, for WebView session sync. */
     @JavascriptInterface
@@ -132,14 +159,8 @@ class TrackingJsBridge(private val context: Context) {
         val locationServicesEnabled = locationManager?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true ||
                 locationManager?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
 
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val backgroundGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+        val fineGranted = hasFineLocationPermission()
+        val backgroundGranted = hasBackgroundLocationPermission()
 
         val notificationsGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(
@@ -156,7 +177,7 @@ class TrackingJsBridge(private val context: Context) {
             put("backgroundLocationGranted", backgroundGranted)
             put("notificationsGranted", notificationsGranted)
             put("batteryOptimizationDisabled", batteryExempt)
-            put("trackingActive", LocationTrackingService.isRunning)
+            put("trackingActive", isTracking())
         }.toString()
     }
 
@@ -235,23 +256,20 @@ class TrackingJsBridge(private val context: Context) {
         openLocationSettings()
     }
 
-    /** Opens background battery optimization settings for permission request. */
+    /** Opens the app permission page that contains "Allow all the time". */
     @JavascriptInterface
-    fun requestBackgroundPermission() {
-        Log.d(TAG, "requestBackgroundPermission called — redirecting to battery optimization settings")
-        openBackgroundSettings()
+    fun requestBackgroundPermission(): Boolean {
+        if (hasBackgroundLocationPermission()) return true
+        Log.d(TAG, "requestBackgroundPermission called — opening app location permissions")
+        openAppLocationPermissionSettings()
+        return false
     }
 
     /** Current native reliability state shown to the web workflow. */
     @JavascriptInterface
     fun getReliabilityStatus(): String {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val backgroundGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+        val fineGranted = hasFineLocationPermission()
+        val backgroundGranted = hasBackgroundLocationPermission()
         val notificationsGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
@@ -267,4 +285,43 @@ class TrackingJsBridge(private val context: Context) {
             put("batteryOptimizationDisabled", batteryExempt)
         }.toString()
     }
+
+    private fun hasFineLocationPermission(): Boolean = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasBackgroundLocationPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+    private fun openAppLocationPermissionSettings(): Boolean {
+        return try {
+            Toast.makeText(
+                context,
+                "Open Permissions → Location → Allow all the time",
+                Toast.LENGTH_LONG
+            ).show()
+            context.startActivity(
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            )
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not open app location permission settings: ${e.message}")
+            false
+        }
+    }
+
+    private fun trackingResult(
+        started: Boolean,
+        error: String? = null,
+        requiresBackgroundPermission: Boolean = false
+    ): String = JSONObject().apply {
+        put("started", started)
+        put("requiresBackgroundPermission", requiresBackgroundPermission)
+        if (error != null) put("error", error)
+    }.toString()
 }

@@ -11,7 +11,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.PowerManager
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
@@ -19,6 +18,7 @@ import android.webkit.*
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -62,9 +62,15 @@ class MainActivity : AppCompatActivity() {
                 this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
             if (!bgGranted) {
-                backgroundLocationLauncher.launch(
-                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                )
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                    backgroundLocationLauncher.launch(
+                        arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                    )
+                } else {
+                    // Android 11+ only exposes "Allow all the time" on the
+                    // application's permission settings page.
+                    openAppLocationPermissionSettings()
+                }
             }
         }
     }
@@ -104,7 +110,6 @@ class MainActivity : AppCompatActivity() {
         setupWebView()
         setupSwipeRefresh()
         requestRequiredPermissions()
-        requestBatteryOptimizationExemption()
 
         if (isNetworkAvailable()) {
             val url = intent?.data?.toString()?.takeIf { it.startsWith("orderplus://") }
@@ -171,8 +176,13 @@ class MainActivity : AppCompatActivity() {
                             startTracking: function(opts) {
                               return new Promise(function(resolve, reject) {
                                 try {
-                                  window.AndroidTracking.startTracking(JSON.stringify(opts));
-                                  resolve();
+                                  var raw = window.AndroidTracking.startTracking(JSON.stringify(opts));
+                                  var result = JSON.parse(raw || '{}');
+                                  if (!result.started) {
+                                    reject(new Error(result.error || 'Android duty tracking did not start.'));
+                                    return;
+                                  }
+                                  resolve(result);
                                 } catch(e) { reject(e); }
                               });
                             },
@@ -238,8 +248,9 @@ class MainActivity : AppCompatActivity() {
                             },
                             requestBackgroundPermission: function() {
                               return new Promise(function(resolve) {
-                                try { window.AndroidTracking.requestBackgroundPermission(); } catch(e) {}
-                                resolve({ granted: true });
+                                try {
+                                  resolve({ granted: !!window.AndroidTracking.requestBackgroundPermission() });
+                                } catch(e) { resolve({ granted: false }); }
                               });
                             },
                             requestReliabilityPermissions: function() {
@@ -478,35 +489,29 @@ class MainActivity : AppCompatActivity() {
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            // Foreground already granted on a prior run — go straight to background prompt.
-            backgroundLocationLauncher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                // Android 10 still provides an "Allow all the time" dialog.
+                backgroundLocationLauncher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+            } else {
+                // Android 11+ requires the app permission settings screen.
+                openAppLocationPermissionSettings()
+            }
         }
     }
 
-    /**
-     * Ask the OS to exempt us from battery optimization. This is the single most
-     * important fix for "tracking stops when the app is closed" — without it,
-     * OEM battery managers and Doze kill the foreground service after a few
-     * minutes in the background. Shown once; never again after the user allows it.
-     */
-    @SuppressLint("BatteryLife")
-    private fun requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-        val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
-        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+    private fun openAppLocationPermissionSettings() {
         try {
+            Toast.makeText(
+                this,
+                "Open Permissions → Location → Allow all the time",
+                Toast.LENGTH_LONG
+            ).show()
             startActivity(
-                Intent(
-                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:$packageName")
-                )
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
             )
-        } catch (e: Exception) {
-            // Fall back to the battery-optimization list if the direct prompt is blocked.
-            try {
-                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-            } catch (_: Exception) {}
-        }
+        } catch (_: Exception) {}
     }
 
     private fun isNetworkAvailable(): Boolean {

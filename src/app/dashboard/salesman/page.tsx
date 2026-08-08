@@ -82,20 +82,19 @@ async function startNativeTrackingIfAvailable(
     throw new Error("GPS is turned off. Turn it on in your phone settings before starting duty.");
   }
 
-  if (!resumeActiveDuty) {
-    try {
-      await bgPlugin.requestBackgroundPermission?.();
-    } catch {
-      // Foreground service can still run while the notification is active.
+  if (initialStatus && !initialStatus.backgroundLocationGranted) {
+    if (!resumeActiveDuty) {
+      await bgPlugin.requestBackgroundPermission?.().catch(() => ({ granted: false }));
     }
-    try {
-      await bgPlugin.requestReliabilityPermissions?.();
-    } catch {
-      // Some managed/OEM devices do not expose a battery-exemption dialog.
-    }
+    throw new Error('Set Android Location permission to "Allow all the time", then return and start duty again.');
   }
 
   await bgPlugin.startTracking({ authToken, refreshToken, companyId, userId, resumeActiveDuty });
+  // The foreground service must start while this Activity is still visible.
+  // Only then may Android's battery settings move the app to the background.
+  if (!resumeActiveDuty && initialStatus && !initialStatus.batteryOptimizationDisabled) {
+    await bgPlugin.requestReliabilityPermissions?.().catch(() => null);
+  }
   return true;
 }
 
@@ -313,7 +312,8 @@ export default function SalesmanDashboard() {
     const onStatus = (event: Event) => {
       const nextStatus = (event as CustomEvent<GpsStatus>).detail;
       setGpsStatus(nextStatus);
-      if (nextStatus.locationServicesEnabled && nextStatus.fineLocationGranted) {
+      if (nextStatus.locationServicesEnabled && nextStatus.fineLocationGranted &&
+          nextStatus.backgroundLocationGranted) {
         setLocationError("");
       }
     };
@@ -820,6 +820,7 @@ export default function SalesmanDashboard() {
   const localGpsProblem = nativeGpsAvailable && Boolean(gpsStatus) && (
     !gpsStatus?.locationServicesEnabled ||
     !gpsStatus?.fineLocationGranted ||
+    !gpsStatus?.backgroundLocationGranted ||
     !gpsStatus?.trackingActive ||
     !gpsStatus?.notificationsGranted
   );
@@ -835,16 +836,18 @@ export default function SalesmanDashboard() {
       ? "GPS is off. Turn it on to continue verified duty tracking and restore native alerts."
       : !gpsStatus?.fineLocationGranted
         ? "Precise location permission is blocked. Allow it to continue duty tracking."
-        : !gpsStatus?.notificationsGranted
-          ? "Android notifications are blocked. Allow notifications to receive GPS warnings."
-          : "Android background GPS monitoring stopped. The app is restarting it now."
+        : !gpsStatus?.backgroundLocationGranted
+          ? 'Background location is blocked. Set Location to "Allow all the time" so tracking continues after closing the app.'
+          : !gpsStatus?.notificationsGranted
+            ? "Android notifications are blocked. Allow notifications to receive GPS warnings."
+            : "Android background GPS monitoring stopped. The app is restarting it now."
     : remoteAndroidHealth?.stale || !remoteAndroidHealth?.service_active
       ? "The Android tracking service is not reporting. Open the phone app and allow Location and Notifications."
       : "The Android phone reports that GPS is off or location permission is blocked.";
   const trackingHealthy = !isOffline && (
     nativeGpsAvailable
       ? Boolean(gpsStatus?.locationServicesEnabled && gpsStatus.fineLocationGranted &&
-          gpsStatus.trackingActive && gpsStatus.notificationsGranted)
+          gpsStatus.backgroundLocationGranted && gpsStatus.trackingActive && gpsStatus.notificationsGranted)
       : remoteAndroidHealth
         ? !remoteAndroidHealth.stale && remoteAndroidHealth.gps_enabled &&
           remoteAndroidHealth.permission_granted && remoteAndroidHealth.service_active
@@ -1012,6 +1015,10 @@ export default function SalesmanDashboard() {
                     plugin.openLocationSettings().catch(() => {});
                     return;
                   }
+                  if (!gpsStatus?.backgroundLocationGranted) {
+                    plugin.requestBackgroundPermission().catch(() => {});
+                    return;
+                  }
                   if (!gpsStatus?.notificationsGranted) {
                     plugin.openNotificationSettings().catch(() => {});
                     return;
@@ -1025,9 +1032,11 @@ export default function SalesmanDashboard() {
               >
                 {!gpsStatus?.locationServicesEnabled
                   ? "Turn on GPS"
-                  : !gpsStatus?.notificationsGranted
-                    ? "Allow notifications"
-                    : "Restore tracking"}
+                  : !gpsStatus?.backgroundLocationGranted
+                    ? 'Allow all the time'
+                    : !gpsStatus?.notificationsGranted
+                      ? "Allow notifications"
+                      : "Restore tracking"}
               </button>
             )}
           </div>
