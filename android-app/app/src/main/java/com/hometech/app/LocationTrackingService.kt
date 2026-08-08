@@ -1,7 +1,6 @@
 package com.hometech.app
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.location.Location
@@ -37,12 +37,12 @@ class LocationTrackingService : Service() {
 
     companion object {
         @Volatile var isRunning = false
-        /** Set by TrackingJsBridge before calling stopService() so onDestroy knows
-         *  it was a deliberate user-initiated stop (not an OS kill). Only in that
-         *  case should we wipe the saved credentials. */
-        @Volatile var manualStopRequested = false
+
+        const val ACTION_START = "com.hometech.app.action.START_DUTY_TRACKING"
+        const val ACTION_STOP  = "com.hometech.app.action.STOP_DUTY_TRACKING"
 
         const val PREFS_NAME      = "hometech_tracking"
+        const val KEY_DUTY_ACTIVE = "duty_active"
         const val KEY_TOKEN       = "auth_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_COMPANY     = "company_id"
@@ -74,6 +74,18 @@ class LocationTrackingService : Service() {
 
         private val isoFmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+        /** One-time migration for duties started by version 1.0.7 or older. */
+        fun hasActiveDuty(prefs: SharedPreferences): Boolean {
+            if (prefs.contains(KEY_DUTY_ACTIVE)) {
+                return prefs.getBoolean(KEY_DUTY_ACTIVE, false)
+            }
+            val legacyDuty = !prefs.getString(KEY_TOKEN, "").isNullOrEmpty() &&
+                !prefs.getString(KEY_BASE_URL, "").isNullOrEmpty() &&
+                prefs.getLong(KEY_START_MS, 0L) > 0L
+            prefs.edit().putBoolean(KEY_DUTY_ACTIVE, legacyDuty).commit()
+            return legacyDuty
         }
     }
 
@@ -107,6 +119,28 @@ class LocationTrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+
+        // Only the explicit End Duty command may make tracking inactive. Activity
+        // destruction, a Recents swipe and an OS process reclaim never enter this
+        // branch, so none of them can accidentally erase the restart state.
+        if (intent?.action == ACTION_STOP) {
+            stopDutyTracking()
+            return START_NOT_STICKY
+        }
+
+        val requestedByVisibleApp = intent?.action == ACTION_START ||
+            !intent?.getStringExtra("authToken").isNullOrEmpty()
+        if (requestedByVisibleApp) {
+            // commit() is intentional: the active bit must reach disk before the
+            // Activity process can disappear after the salesman starts duty.
+            prefs.edit().putBoolean(KEY_DUTY_ACTIVE, true).commit()
+        }
+
+        if (!hasActiveDuty(prefs)) {
+            Log.i(TAG, "No active duty — ignoring tracking service start")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
 
         authToken = intent?.getStringExtra("authToken")  ?: prefs.getString(KEY_TOKEN,    "") ?: ""
         refreshToken = intent?.getStringExtra("refreshToken")
@@ -160,6 +194,30 @@ class LocationTrackingService : Service() {
         TrackingWatchdogReceiver.schedule(this)
         Log.i(TAG, "Tracking started (interval=${INTERVAL_MS}ms, minDist=${MIN_DIST_FILTER_M}m)")
         return START_STICKY
+    }
+
+    private fun stopDutyTracking() {
+        // Persist the stop first. Even if Android kills this process during
+        // teardown, BootReceiver and the watchdog now know duty has ended.
+        pendingQueue.clear()
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+            .putBoolean(KEY_DUTY_ACTIVE, false)
+            .remove(KEY_TOKEN).remove(KEY_COMPANY).remove(KEY_BASE_URL)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_START_MS).remove(KEY_DISTANCE_KM).remove(KEY_PING_QUEUE)
+            .commit()
+        TrackingWatchdogReceiver.cancel(this)
+        if (::locationCallback.isInitialized) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        stopSelf()
+        Log.i(TAG, "Tracking stopped by explicit End Duty command")
     }
 
     private fun startLocationUpdates() {
@@ -453,15 +511,14 @@ class LocationTrackingService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // App swiped away — keep service alive by re-launching ourselves.
-        val restart = Intent(applicationContext, LocationTrackingService::class.java)
-        ContextCompat.startForegroundService(applicationContext, restart)
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        else PendingIntent.FLAG_UPDATE_CURRENT
-        val restartPendingIntent = PendingIntent.getService(applicationContext, 2001, restart, flags)
-        val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-        alarmManager?.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, restartPendingIntent)
+        // A Recents swipe does not stop this foreground service. Arm the receiver
+        // as an immediate safety net in case an OEM kills the process just after
+        // delivering onTaskRemoved. PendingIntent.getService is deliberately not
+        // used: Android 12+ can reject direct background service launches.
+        if (hasActiveDuty(getSharedPreferences(PREFS_NAME, MODE_PRIVATE))) {
+            TrackingWatchdogReceiver.schedule(applicationContext, 1_000L)
+            Log.i(TAG, "App removed from Recents — duty tracking remains active")
+        }
         super.onTaskRemoved(rootIntent)
     }
 
@@ -473,23 +530,12 @@ class LocationTrackingService : Service() {
         releaseWakeLock()
         try { netExecutor.shutdownNow() } catch (_: Exception) {}
 
-        // Only wipe saved credentials when the salesman explicitly ended duty
-        // via the JS bridge. If the OS killed the service (low memory etc.) we
-        // must keep them so START_STICKY can restart tracking automatically.
-        if (manualStopRequested) {
-            manualStopRequested = false
-            // Duty ended on purpose — stop the watchdog and wipe credentials so
-            // nothing relaunches tracking.
-            TrackingWatchdogReceiver.cancel(this)
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-                .remove(KEY_TOKEN).remove(KEY_COMPANY).remove(KEY_BASE_URL)
-                .remove(KEY_REFRESH_TOKEN)
-                .remove(KEY_START_MS).remove(KEY_DISTANCE_KM).remove(KEY_PING_QUEUE)
-                .apply()
-            Log.i(TAG, "Tracking stopped (manual) — ${String.format("%.2f", totalDistanceKm)} km total")
-        } else {
-            // OS/OEM kill — leave credentials + watchdog in place so it restarts.
-            Log.i(TAG, "Service destroyed by OS — credentials kept for auto-restart")
+        // onDestroy is not proof that duty ended: Android and OEM task managers
+        // call it while reclaiming processes. Preserve state and re-arm recovery
+        // unless the explicit ACTION_STOP already cleared the durable active bit.
+        if (hasActiveDuty(getSharedPreferences(PREFS_NAME, MODE_PRIVATE))) {
+            TrackingWatchdogReceiver.schedule(this, 5_000L)
+            Log.i(TAG, "Service destroyed while on duty — state kept for auto-restart")
         }
         super.onDestroy()
     }

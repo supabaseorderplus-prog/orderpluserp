@@ -42,7 +42,14 @@ class TrackingJsBridge(private val context: Context) {
                 return
             }
 
+            // Persist the duty decision synchronously before launching the
+            // service. A fast Recents swipe must not race an asynchronous write.
+            context.getSharedPreferences(
+                LocationTrackingService.PREFS_NAME, Context.MODE_PRIVATE
+            ).edit().putBoolean(LocationTrackingService.KEY_DUTY_ACTIVE, true).commit()
+
             val intent = Intent(context, LocationTrackingService::class.java).apply {
+                action = LocationTrackingService.ACTION_START
                 putExtra("authToken", authToken)
                 putExtra("refreshToken", refreshToken)
                 putExtra("companyId", companyId)
@@ -59,13 +66,15 @@ class TrackingJsBridge(private val context: Context) {
     @JavascriptInterface
     fun stopTracking() {
         try {
-            // Mark as manual so onDestroy knows to wipe credentials rather than
-            // keeping them for an automatic OS-triggered restart.
-            LocationTrackingService.manualStopRequested = true
-            context.stopService(Intent(context, LocationTrackingService::class.java))
-            Log.i(TAG, "stopTracking: service stopped")
+            // Send an explicit command instead of calling stopService(). The
+            // service itself commits the inactive bit before teardown, ensuring
+            // neither the boot receiver nor watchdog can resurrect ended duty.
+            val intent = Intent(context, LocationTrackingService::class.java).apply {
+                action = LocationTrackingService.ACTION_STOP
+            }
+            context.startService(intent)
+            Log.i(TAG, "stopTracking: explicit End Duty command sent")
         } catch (e: Exception) {
-            LocationTrackingService.manualStopRequested = false
             Log.e(TAG, "stopTracking error: ${e.message}")
         }
     }
