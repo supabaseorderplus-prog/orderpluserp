@@ -32,7 +32,9 @@ services:
       SERVER_TYPE: http
       SERVER_PORT: 8080
       SERVER_URL: ${WHATSAPP_PUBLIC_API_URL:-http://localhost:8080}
-      CORS_ORIGIN: ${WHATSAPP_APP_ORIGIN:-http://localhost:3001}
+      # Evolution accepts comma-separated origins. Keep local development and
+      # both production hostnames available for server-to-server API calls.
+      CORS_ORIGIN: ${WHATSAPP_CORS_ORIGIN:-http://localhost:3001,https://orderpluserp.in,https://www.orderpluserp.in}
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://evolution:${WHATSAPP_DB_PASSWORD}@evolution-postgres:5432/evolution
       DATABASE_CONNECTION_CLIENT_NAME: hometech-whatsapp
