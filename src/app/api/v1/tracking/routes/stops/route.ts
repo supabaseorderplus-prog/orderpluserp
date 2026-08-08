@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, getUserFromToken } from '@/lib/supabase-server'
+import { prepareRouteStopIds } from '@/lib/route-stop-batch'
 
 type DbError = { code?: string; message?: string; details?: string; hint?: string }
 
@@ -58,6 +59,89 @@ async function ensureBeatRouteMirror(routeId: string): Promise<boolean> {
 
   console.warn('[STOPS POST] Could not mirror route into beat_routes:', error)
   return false
+}
+
+type StopRow = Record<string, unknown>
+type StopBatchAttempt = {
+  rows: StopRow[]
+  select: string
+  normalize: (row: StopRow, index: number) => StopRow
+}
+
+async function insertStopBatch(
+  routeId: string,
+  partyIds: string[],
+  firstOrder: number,
+): Promise<StopRow[]> {
+  if (partyIds.length === 0) return []
+
+  const attempts: StopBatchAttempt[] = [
+    {
+      rows: partyIds.map((partyId, index) => ({
+        route_id: routeId,
+        retailer_id: partyId,
+        stop_order: firstOrder + index,
+        expected_visit_duration_min: 15,
+        status: 'ACTIVE',
+      })),
+      select: 'id, stop_order, retailer_id',
+      normalize: (row: StopRow) => ({ ...row, party_id: row.retailer_id }),
+    },
+    {
+      rows: partyIds.map((partyId, index) => ({
+        route_id: routeId,
+        retailer_id: partyId,
+        stop_order: firstOrder + index,
+      })),
+      select: 'id, stop_order, retailer_id',
+      normalize: (row: StopRow) => ({ ...row, party_id: row.retailer_id }),
+    },
+    {
+      rows: partyIds.map((partyId, index) => ({
+        route_id: routeId,
+        party_id: partyId,
+        sequence: firstOrder + index,
+      })),
+      select: 'id, sequence, party_id',
+      normalize: (row: StopRow) => ({
+        ...row,
+        retailer_id: row.party_id,
+        stop_order: row.sequence,
+      }),
+    },
+    {
+      rows: partyIds.map((partyId) => ({ route_id: routeId, party_id: partyId })),
+      select: 'id, party_id',
+      normalize: (row: StopRow, index: number) => ({
+        ...row,
+        retailer_id: row.party_id,
+        stop_order: firstOrder + index,
+      }),
+    },
+  ]
+
+  for (const attempt of attempts) {
+    let result = await supabaseAdmin
+      .from('route_stops')
+      .insert(attempt.rows)
+      .select(attempt.select)
+
+    if (result.error && isRouteReferenceMismatch(result.error) && await ensureBeatRouteMirror(routeId)) {
+      result = await supabaseAdmin
+        .from('route_stops')
+        .insert(attempt.rows)
+        .select(attempt.select)
+    }
+
+    if (!result.error) {
+      return ((result.data || []) as unknown as StopRow[]).map((row, index) =>
+        attempt.normalize(row, index),
+      )
+    }
+    if (!isSchemaGap(result.error)) throw result.error
+  }
+
+  throw new Error('Route stops table schema is missing required columns')
 }
 
 // GET /api/v1/tracking/routes/stops?route_id=xxx
@@ -159,7 +243,10 @@ export async function GET(req: NextRequest) {
         .in('id', retailerIds)
 
       if (!partiesError) {
-        for (const p of partiesData || []) partyMap[(p as { id: string }).id] = p
+        for (const p of partiesData || []) {
+          const row = p as unknown as { id: string }
+          partyMap[row.id] = p
+        }
         break
       }
 
@@ -183,12 +270,39 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { route_id, party_id, stop_order, notes } = body
+    const { route_id, party_id, party_ids, stop_order, notes } = body
 
     if (!route_id) return NextResponse.json({ success: false, message: 'route_id is required' }, { status: 400 })
-    if (!party_id) return NextResponse.json({ success: false, message: 'party_id is required' }, { status: 400 })
+    if (!party_id && !Array.isArray(party_ids)) {
+      return NextResponse.json({ success: false, message: 'party_id or party_ids is required' }, { status: 400 })
+    }
 
     await getUserFromToken(req)
+
+    // Route creation sends the whole group in one request. Validate IDs against the
+    // live parties table first so a party deleted after group assignment cannot make
+    // the route fail halfway through or leave the UI spinning.
+    if (Array.isArray(party_ids)) {
+      const requestedIds = [...new Set(party_ids.filter((id): id is string => typeof id === 'string' && id.trim() !== ''))]
+      const { data: existingParties, error: partiesError } = requestedIds.length > 0
+        ? await supabaseAdmin.from('parties').select('id').in('id', requestedIds)
+        : { data: [], error: null }
+
+      if (partiesError) throw partiesError
+
+      const prepared = prepareRouteStopIds(
+        party_ids,
+        (existingParties || []).map((row) => row.id),
+      )
+      const rows = await insertStopBatch(route_id, prepared.validIds, Number(stop_order) || 1)
+
+      return NextResponse.json({
+        success: true,
+        data: rows,
+        inserted_count: rows.length,
+        skipped_party_ids: prepared.skippedIds,
+      })
+    }
 
     // Resolve next stop order
     let nextOrder = stop_order ?? 1

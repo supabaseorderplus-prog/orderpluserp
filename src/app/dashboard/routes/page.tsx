@@ -1307,8 +1307,16 @@ export default function RoutesPage() {
     if (!form.name.trim()) { setError("Route name is required"); return; }
     const group = groups.find(g => g.id === form.group_id);
     if (!group) { setError("Selected group could not be found — try reloading"); return; }
+    const duplicateRoute = routes.find(
+      route => route.name.trim().toLocaleLowerCase() === form.name.trim().toLocaleLowerCase(),
+    );
+    if (duplicateRoute) {
+      setError("This route already exists. Close this form and use the existing route.");
+      return;
+    }
     setSaving(true);
     setError("");
+    let createdRouteId: string | null = null;
     try {
       // The route is assigned to the group's salesman, with the weekday in `code`.
       const res = await api<{ data: { id: string } }>("/api/v1/tracking/routes", {
@@ -1322,18 +1330,23 @@ export default function RoutesPage() {
         },
       });
       const routeId = res.data?.id;
+      createdRouteId = routeId || null;
       // Snapshot the group's current members as route stops (existing mechanism).
       if (routeId && group.member_ids.length > 0) {
-        await Promise.all(
-          group.member_ids.map((partyId, i) =>
-            api("/api/v1/tracking/routes/stops", { method: "POST", body: { route_id: routeId, party_id: partyId, stop_order: i + 1 } })
-          )
-        );
+        await api("/api/v1/tracking/routes/stops", {
+          method: "POST",
+          body: { route_id: routeId, party_ids: group.member_ids, stop_order: 1 },
+        });
       }
       setShowModal(false);
       setLoading(true);
       await loadRoutes();
     } catch (err: unknown) {
+      // Keep creation atomic from the user's perspective. If adding stops genuinely
+      // fails, remove the newly-created route so retrying cannot create duplicates.
+      if (createdRouteId) {
+        await api(`/api/v1/tracking/routes?id=${createdRouteId}`, { method: "DELETE" }).catch(() => {});
+      }
       setError(getErrorMessage(err, "Failed to create route"));
     }
     setSaving(false);
