@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken, resolveCompanyScope } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission, resolveCompanyScope } from '@/lib/supabase-server'
 import { applyPartyEffectivePrices } from '@/lib/product-pricing'
 
 let tableFixed = false
@@ -194,6 +194,7 @@ export async function GET(req: NextRequest) {
   try {
     const { authUser, companyId } = await resolveInsertCompanyId(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_view')) return NextResponse.json({ success: false, message: 'You do not have permission to view products' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     await ensureProductsTable()
@@ -353,6 +354,7 @@ export async function POST(req: NextRequest) {
   try {
     const { authUser, companyId } = await resolveInsertCompanyId(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_create')) return NextResponse.json({ success: false, message: 'You do not have permission to create products' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     await ensureProductsTable()
@@ -487,6 +489,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const { authUser, companyId } = await resolveInsertCompanyId(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_edit')) return NextResponse.json({ success: false, message: 'You do not have permission to edit products' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     const body = await req.json()
@@ -646,6 +649,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const { authUser, companyId } = await resolveInsertCompanyId(req)
     if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_delete')) return NextResponse.json({ success: false, message: 'You do not have permission to delete products' }, { status: 403 })
     if (!companyId) return NextResponse.json({ success: false, message: 'Company not found' }, { status: 403 })
 
     await ensureProductsTable()

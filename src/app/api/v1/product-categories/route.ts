@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken, resolveCompanyScope } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission, resolveCompanyScope } from '@/lib/supabase-server'
 
 type SupabaseErrorLike = {
   code?: string
@@ -364,6 +364,9 @@ async function getCategorySchema(forceRefresh = false): Promise<CategorySchema> 
 
 export async function GET(req: NextRequest) {
   try {
+    const authUser = await getUserFromToken(req)
+    if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_view')) return NextResponse.json({ success: false, message: 'You do not have permission to view product categories' }, { status: 403 })
     const companyId = await resolveCompanyId(req)
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
@@ -446,6 +449,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getUserFromToken(request)
+    if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_create')) return NextResponse.json({ success: false, message: 'You do not have permission to create product categories' }, { status: 403 })
     const companyId = await resolveCompanyId(request)
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
@@ -502,6 +508,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authUser = await getUserFromToken(request)
+    if (!authUser) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    if (!await hasModulePermission(authUser, 'products', 'can_delete')) return NextResponse.json({ success: false, message: 'You do not have permission to delete product categories' }, { status: 403 })
     const companyId = await resolveCompanyId(request)
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })

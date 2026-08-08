@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { api } from "@/lib/api";
+import { api, getModulePermission, type ModulePermission } from "@/lib/api";
 import { ChevronLeft, ChevronRight, FolderOpen, ImagePlus, Loader2, Package, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 
 interface Product {
@@ -43,7 +43,16 @@ const emptyForm = {
   image_url: "",
 };
 
+const VIEW_ONLY_PRODUCTS: ModulePermission = {
+  can_view: true,
+  can_create: false,
+  can_edit: false,
+  can_delete: false,
+  can_approve: false,
+};
+
 export default function ProductsPage() {
+  const [permissions, setPermissions] = useState<ModulePermission>(VIEW_ONLY_PRODUCTS);
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -76,6 +85,8 @@ export default function ProductsPage() {
   const [newCatName, setNewCatName] = useState("");
   const [catCreating, setCatCreating] = useState(false);
   const [catError, setCatError] = useState("");
+
+  useEffect(() => { void getModulePermission("products").then(setPermissions); }, []);
 
   const fetchCategories = useCallback(async () => {
     setCatsLoading(true);
@@ -151,6 +162,7 @@ export default function ProductsPage() {
   };
 
   const handleRowImageUpload = async (productId: string, file: File) => {
+    if (!permissions.can_edit) return;
     setRowImageUploading(productId);
     try {
       const data = await uploadImage(file);
@@ -169,6 +181,7 @@ export default function ProductsPage() {
   };
 
   const openCreate = async () => {
+    if (!permissions.can_create) return;
     setCreateError("");
     setEditId(null);
     setImagePreview("");
@@ -190,6 +203,7 @@ export default function ProductsPage() {
   };
 
   const openEdit = async (p: Product) => {
+    if (!permissions.can_edit) return;
     setCreateError("");
     setEditId(p.id);
     const img = getProductImage(p) || "";
@@ -220,6 +234,7 @@ export default function ProductsPage() {
   };
 
   const handleCreate = async () => {
+    if (editId ? !permissions.can_edit : !permissions.can_create) return;
     if (!form.name.trim() || !form.base_price) {
         setCreateError("Name and Base Price are required");
       return;
@@ -287,6 +302,7 @@ export default function ProductsPage() {
   const set = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
   const handleDelete = async (id: string) => {
+    if (!permissions.can_delete) return;
     if (!confirm("Delete this product?")) return;
     try {
       await api("/api/v1/products", { method: "DELETE", body: { id } });
@@ -297,6 +313,7 @@ export default function ProductsPage() {
   };
 
   const openManageCats = () => {
+    if (!permissions.can_create && !permissions.can_delete) return;
     setNewCatName("");
     setCatError("");
     setShowManageCats(true);
@@ -304,6 +321,7 @@ export default function ProductsPage() {
   };
 
   const handleCreateCategory = async () => {
+    if (!permissions.can_create) return;
     if (!newCatName.trim()) return;
     setCatCreating(true);
     setCatError("");
@@ -318,6 +336,7 @@ export default function ProductsPage() {
   };
 
   const handleDeleteCategory = async (id: string) => {
+    if (!permissions.can_delete) return;
     if (!confirm("Delete this category? Products in it won't be deleted.")) return;
     setCatError("");
     try {
@@ -344,20 +363,24 @@ export default function ProductsPage() {
             <p className="text-zinc-600" style={{ fontSize: "0.8rem", margin: 0 }}>{total} products in catalog</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={openManageCats}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-black/10 text-zinc-600 hover:text-zinc-900 hover:bg-black/5 transition-colors"
-              style={{ fontSize: "0.8rem", fontFamily: "inherit", background: "none", cursor: "pointer" }}
-            >
-              <FolderOpen className="w-4 h-4" /><span className="hidden sm:inline">Categories</span>
-            </button>
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 px-3 py-2 lg:px-4 rounded-lg text-black font-semibold hover:opacity-90 transition-opacity"
-              style={{ fontSize: "0.8rem", fontFamily: "inherit", background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", cursor: "pointer" }}
-            >
-              <Plus className="w-4 h-4" /><span className="hidden sm:inline">Create Product</span><span className="sm:hidden">Add</span>
-            </button>
+            {(permissions.can_create || permissions.can_delete) && (
+              <button
+                onClick={openManageCats}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-black/10 text-zinc-600 hover:text-zinc-900 hover:bg-black/5 transition-colors"
+                style={{ fontSize: "0.8rem", fontFamily: "inherit", background: "none", cursor: "pointer" }}
+              >
+                <FolderOpen className="w-4 h-4" /><span className="hidden sm:inline">Categories</span>
+              </button>
+            )}
+            {permissions.can_create && (
+              <button
+                onClick={openCreate}
+                className="inline-flex items-center gap-2 px-3 py-2 lg:px-4 rounded-lg text-black font-semibold hover:opacity-90 transition-opacity"
+                style={{ fontSize: "0.8rem", fontFamily: "inherit", background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", cursor: "pointer" }}
+              >
+                <Plus className="w-4 h-4" /><span className="hidden sm:inline">Create Product</span><span className="sm:hidden">Add</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -393,10 +416,11 @@ export default function ProductsPage() {
                     <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-3 min-w-0">
                             <button
-                              title={getProductImage(p) ? "Change image" : "Upload image"}
+                              title={permissions.can_edit ? (getProductImage(p) ? "Change image" : "Upload image") : "Product image"}
                               onClick={() => { rowImageTargetId.current = p.id; rowImageInputRef.current?.click(); }}
-                              className="relative shrink-0 group"
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                              disabled={!permissions.can_edit}
+                              className={`relative shrink-0 disabled:cursor-default ${permissions.can_edit ? "group" : ""}`}
+                              style={{ background: "none", border: "none", cursor: permissions.can_edit ? "pointer" : "default", padding: 0 }}
                             >
                               {rowImageUploading === p.id ? (
                                 <div className="w-10 h-10 rounded-lg bg-black/[0.04] border border-black/10 flex items-center justify-center">
@@ -422,18 +446,22 @@ export default function ProductsPage() {
                           <span className={`w-1.5 h-1.5 rounded-full ${p.status === "ACTIVE" ? "bg-emerald-500" : "bg-zinc-600"}`} />
                           {p.status === "ACTIVE" ? "Active" : "Inactive"}
                         </span>
-                        <button onClick={() => openEdit(p)}
-                          className="p-1 rounded-lg text-zinc-600 hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
-                          style={{ background: "none", border: "none", cursor: "pointer" }}
-                          title="Edit product">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)}
-                          className="p-1 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                          style={{ background: "none", border: "none", cursor: "pointer" }}
-                          title="Delete product">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {permissions.can_edit && (
+                          <button onClick={() => openEdit(p)}
+                            className="p-1 rounded-lg text-zinc-600 hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
+                            style={{ background: "none", border: "none", cursor: "pointer" }}
+                            title="Edit product">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {permissions.can_delete && (
+                          <button onClick={() => handleDelete(p.id)}
+                            className="p-1 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            style={{ background: "none", border: "none", cursor: "pointer" }}
+                            title="Delete product">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                   </div>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -474,10 +502,11 @@ export default function ProductsPage() {
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
                                 <button
-                                  title={getProductImage(p) ? "Click to change image" : "Click to upload image"}
+                                  title={permissions.can_edit ? (getProductImage(p) ? "Click to change image" : "Click to upload image") : "Product image"}
                                   onClick={() => { rowImageTargetId.current = p.id; rowImageInputRef.current?.click(); }}
-                                  className="relative shrink-0 group"
-                                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                                  disabled={!permissions.can_edit}
+                                  className={`relative shrink-0 disabled:cursor-default ${permissions.can_edit ? "group" : ""}`}
+                                  style={{ background: "none", border: "none", cursor: permissions.can_edit ? "pointer" : "default", padding: 0 }}
                                 >
                                   {rowImageUploading === p.id ? (
                                     <div className="w-9 h-9 rounded-lg bg-black/[0.04] border border-black/10 flex items-center justify-center">
@@ -515,18 +544,22 @@ export default function ProductsPage() {
                               </td>
                               <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <button onClick={() => openEdit(p)}
-                                  className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
-                                  style={{ background: "none", border: "none", cursor: "pointer" }}
-                                  title="Edit product">
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => handleDelete(p.id)}
-                                  className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                  style={{ background: "none", border: "none", cursor: "pointer" }}
-                                  title="Delete product">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                {permissions.can_edit && (
+                                  <button onClick={() => openEdit(p)}
+                                    className="p-1.5 rounded-lg text-zinc-600 hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
+                                    style={{ background: "none", border: "none", cursor: "pointer" }}
+                                    title="Edit product">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {permissions.can_delete && (
+                                  <button onClick={() => handleDelete(p.id)}
+                                    className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                    style={{ background: "none", border: "none", cursor: "pointer" }}
+                                    title="Delete product">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                       </tr>
@@ -548,20 +581,22 @@ export default function ProductsPage() {
       )}
 
       {/* Hidden file input for per-row image upload */}
-      <input
-        ref={rowImageInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f && rowImageTargetId.current) handleRowImageUpload(rowImageTargetId.current, f);
-          if (rowImageInputRef.current) rowImageInputRef.current.value = "";
-        }}
-      />
+      {permissions.can_edit && (
+        <input
+          ref={rowImageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f && rowImageTargetId.current) handleRowImageUpload(rowImageTargetId.current, f);
+            if (rowImageInputRef.current) rowImageInputRef.current.value = "";
+          }}
+        />
+      )}
 
       {/* Manage Categories Modal */}
-      {showManageCats && (
+      {showManageCats && (permissions.can_create || permissions.can_delete) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
           <div className="w-full max-w-sm rounded-xl border border-black/10 p-6" style={{ background: "#ffffff", maxHeight: "80vh", overflowY: "auto" }}>
             <div className="flex items-center justify-between mb-5">
@@ -573,25 +608,27 @@ export default function ProductsPage() {
             </div>
 
             {/* Create new category */}
-            <div className="flex gap-2 mb-4">
-              <input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreateCategory()}
-                placeholder="New category name…"
-                className={inputCls + " flex-1"}
-                style={inputStyle}
-              />
-              <button
-                onClick={handleCreateCategory}
-                disabled={catCreating || !newCatName.trim()}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-black font-semibold hover:opacity-90 disabled:opacity-40"
-                style={{ fontSize: "0.78rem", fontFamily: "inherit", background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
-              >
-                {catCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                Add
-              </button>
-            </div>
+            {permissions.can_create && (
+              <div className="flex gap-2 mb-4">
+                <input
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateCategory()}
+                  placeholder="New category name…"
+                  className={inputCls + " flex-1"}
+                  style={inputStyle}
+                />
+                <button
+                  onClick={handleCreateCategory}
+                  disabled={catCreating || !newCatName.trim()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-black font-semibold hover:opacity-90 disabled:opacity-40"
+                  style={{ fontSize: "0.78rem", fontFamily: "inherit", background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  {catCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  Add
+                </button>
+              </div>
+            )}
 
             {catError && <div className="mb-3 px-3 py-2 rounded-lg border border-red-500/30 text-red-400" style={{ fontSize: "0.78rem", background: "rgba(239,68,68,0.06)" }}>{catError}</div>}
 
@@ -608,14 +645,16 @@ export default function ProductsPage() {
                       <Tag className="w-3 h-3 text-amber-500" />
                       <span className="text-zinc-800" style={{ fontSize: "0.82rem" }}>{cat.name}</span>
                     </div>
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="p-1 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      style={{ background: "none", border: "none", cursor: "pointer" }}
-                      title="Delete category"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {permissions.can_delete && (
+                      <button
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        style={{ background: "none", border: "none", cursor: "pointer" }}
+                        title="Delete category"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -625,7 +664,7 @@ export default function ProductsPage() {
       )}
 
       {/* Create Product Modal */}
-      {showCreate && (
+      {showCreate && (editId ? permissions.can_edit : permissions.can_create) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
           <div className="w-full max-w-lg rounded-xl border border-black/10 p-6" style={{ background: "#ffffff", maxHeight: "90vh", overflowY: "auto" }}>
             <div className="flex items-center justify-between mb-5">
@@ -758,7 +797,7 @@ export default function ProductsPage() {
                       <option value="">— Select category —</option>
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    {categories.length === 0 && (
+                    {categories.length === 0 && permissions.can_create && (
                       <p className="text-zinc-400 mt-1" style={{ fontSize: "0.65rem" }}>
                         No categories yet.{" "}
                         <button

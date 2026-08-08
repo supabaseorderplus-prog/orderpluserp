@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, getUserFromToken } from '@/lib/supabase-server'
+import { supabaseAdmin, getUserFromToken, hasModulePermission } from '@/lib/supabase-server'
 
 const BUCKET = 'product-images'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -44,6 +44,11 @@ export async function POST(req: NextRequest) {
     const authUser = await getUserFromToken(req)
     if (!authUser) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    }
+    const canCreate = await hasModulePermission(authUser, 'products', 'can_create')
+    const canEdit = await hasModulePermission(authUser, 'products', 'can_edit')
+    if (!canCreate && !canEdit) {
+      return NextResponse.json({ success: false, message: 'You do not have permission to upload product images' }, { status: 403 })
     }
 
     const formData = await req.formData()
