@@ -1387,16 +1387,21 @@ export default function RoutesPage() {
           <p className="mt-2" style={{ fontSize: "0.75rem" }}>Click &quot;Create Route&quot; to add your first beat route.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          data-testid="route-scroll-window"
+          aria-label="Route list"
+          className="h-[1396px] md:h-[694px] lg:h-[460px] overflow-y-auto overscroll-contain rounded-2xl pr-2 [scrollbar-color:rgba(161,161,170,0.55)_transparent] [scrollbar-width:thin]"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
           {routes.map((route) => (
-            <div key={route.id} className="rounded-xl border border-black/[0.06] bg-black/[0.02] p-5 hover:bg-black/[0.04] transition-all">
+            <div key={route.id} className="h-[218px] rounded-xl border border-black/[0.06] bg-black/[0.02] p-5 hover:bg-black/[0.04] transition-all flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
                     <RouteIcon className="w-5 h-5 text-cyan-400" />
                   </div>
                   <div>
-                    <h3 className="text-zinc-900 font-medium" style={{ fontSize: "0.85rem" }}>{route.name}</h3>
+                    <h3 className="text-zinc-900 font-medium line-clamp-2" style={{ fontSize: "0.85rem" }}>{route.name}</h3>
                     {route.code && (
                       <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 font-medium" style={{ fontSize: "0.62rem" }}>{dayLabel(route.code)}</span>
                     )}
@@ -1432,7 +1437,7 @@ export default function RoutesPage() {
               {isSalesman ? (
                 <button
                   onClick={() => openViewRouteModal(route)}
-                  className="mt-4 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 hover:text-cyan-300 transition-all"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 hover:text-cyan-300 transition-all"
                   style={{ fontSize: "0.75rem" }}
                 >
                   <Navigation className="w-3.5 h-3.5" />
@@ -1441,7 +1446,7 @@ export default function RoutesPage() {
               ) : (
                 <button
                   onClick={() => openStopModal(route)}
-                  className="mt-4 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 hover:text-cyan-300 transition-all"
+                  className="mt-auto w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-400 hover:text-cyan-300 transition-all"
                   style={{ fontSize: "0.75rem" }}
                 >
                   <MapPin className="w-3.5 h-3.5" />
@@ -1450,6 +1455,7 @@ export default function RoutesPage() {
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
 
