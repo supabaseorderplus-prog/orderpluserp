@@ -1,6 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, getUserFromToken, resolveCompanyScope, getPartyDescendants } from '@/lib/supabase-server'
 
+type SupabaseError = { code?: string; message?: string } | null
+
+function missingColumn(error: SupabaseError): string | null {
+  const message = error?.message || ''
+  const patterns = [
+    /Could not find the '([^']+)' column/i,
+    /column\s+"?([^"\s]+)"?\s+(?:of relation\s+"?[^"]+"?\s+)?does not exist/i,
+    /column\s+[^.\s]+\.([^\s]+)\s+does not exist/i,
+  ]
+  for (const pattern of patterns) {
+    const match = message.match(pattern)
+    if (match?.[1]) return match[1].replace(/"/g, '')
+  }
+  return null
+}
+
+async function approveOrderCompat(id: string, approvedBy: string | null) {
+  const optionalColumns = new Set(['order_status', 'approved_by', 'approval_time'])
+  const payload: Record<string, unknown> = {
+    status: 'APPROVED',
+    order_status: 'APPROVED',
+    approved_by: approvedBy,
+    approval_time: new Date().toISOString(),
+  }
+
+  for (let attempt = 0; attempt <= optionalColumns.size; attempt += 1) {
+    const result = await supabaseAdmin
+      .from('orders')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle()
+
+    if (!result.error) return result
+    const column = missingColumn(result.error)
+    if (!column || !optionalColumns.has(column) || !(column in payload)) return result
+    delete payload[column]
+  }
+
+  return { data: null, error: { message: 'Order approval could not be saved.' } }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,13 +72,16 @@ export async function POST(
     }
 
     // Get order
+    // select('*') keeps approval compatible with legacy schemas that only have
+    // billing_party_id and do not yet have company_id/seller_id/buyer_id.
     const { data: order, error } = await supabaseAdmin
       .from('orders')
-      .select('id, status, company_id, seller_id, buyer_id, billing_party_id')
+      .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
-    if (error || !order) {
+    if (error) throw error
+    if (!order) {
       return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 })
     }
 
@@ -57,26 +102,25 @@ export async function POST(
     }
 
     // Validate status transition
-    if (order.status !== 'PENDING') {
+    const currentStatus = String(order.status || order.order_status || '').toUpperCase()
+    if (currentStatus !== 'PENDING') {
       return NextResponse.json(
-        { success: false, message: `Cannot approve order with status "${order.status}". Order must be PENDING.` },
+        { success: false, message: `Cannot approve order with status "${currentStatus}". Order must be PENDING.` },
         { status: 400 }
       )
     }
 
-    // Update status to APPROVED
-    const { data: updated, error: updateErr } = await supabaseAdmin
-      .from('orders')
-      .update({
-        status: 'APPROVED',
-        approved_by: authUser?.app_user_id || authUser?.id,
-        approval_time: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
+    // Update both status fields when present, and automatically drop optional
+    // audit columns that do not exist in older deployments.
+    const { data: updated, error: updateErr } = await approveOrderCompat(
+      id,
+      authUser?.app_user_id || authUser?.id || null,
+    )
 
     if (updateErr) throw updateErr
+    if (!updated) {
+      return NextResponse.json({ success: false, message: 'Order status changed. Refresh and try again.' }, { status: 409 })
+    }
 
     return NextResponse.json({ success: true, data: updated, message: 'Order approved' })
   } catch (err) {
