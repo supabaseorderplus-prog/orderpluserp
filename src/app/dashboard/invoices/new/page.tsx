@@ -116,6 +116,15 @@ interface ShareApprovalData {
   party: { id: string | null; name: string; phone: string; whatsapp_number: string };
 }
 
+interface WhatsAppDeliveryPopup {
+  orderNumber: string;
+  status: "sending" | "sent" | "send_failed" | "approval_failed";
+  detail: string;
+  partyName?: string;
+  to?: string;
+  messageId?: string | null;
+}
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -286,34 +295,13 @@ export default function NewInvoicePage() {
       });
     // Party dual-approval: order_id -> confirmation summary.
     const [approvals, setApprovals] = useState<Record<string, ApprovalSummary>>({});
-    const [sharingOrderId, setSharingOrderId] = useState<string | null>(null);
+    const [whatsAppDeliveryPopup, setWhatsAppDeliveryPopup] = useState<WhatsAppDeliveryPopup | null>(null);
 
   const fetchApprovals = useCallback(() => {
     api<{ success: boolean; data: Record<string, ApprovalSummary> }>("/api/v1/orders/approval-status", { noCache: true })
       .then((r) => setApprovals(r.data || {}))
       .catch(() => {});
   }, []);
-
-  // Mint a fresh single-use approval link and deliver it through the server-side
-  // WhatsApp service. The user never has to open WhatsApp or press Send.
-  const openShareApproval = useCallback(async (order: Order, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (sharingOrderId) return;
-    setSharingOrderId(order.id);
-    try {
-      const res = await api<{ success: boolean; data: ShareApprovalData }>(
-        `/api/v1/orders/${order.id}/share-approval`,
-        { method: "POST", body: {} },
-      );
-      if (res?.data?.whatsapp_delivery?.status !== "sent") throw new Error("WhatsApp did not confirm the automatic send.");
-      fetchApprovals();
-      alert("Order confirmation was sent automatically on WhatsApp.");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to send WhatsApp automatically");
-    } finally {
-      setSharingOrderId(null);
-    }
-  }, [sharingOrderId, fetchApprovals]);
 
   function fetchOrders() {
     setOrdersLoading(true);
@@ -867,21 +855,77 @@ export default function NewInvoicePage() {
     }
   }
 
-    async function updateOrderStatus(orderId: string, nextStatus: typeof ORDER_STATUS_OPTIONS[number]) {
-      setUpdatingOrderId(orderId);
+    async function updateOrderStatus(order: Order, nextStatus: typeof ORDER_STATUS_OPTIONS[number]) {
+      const isApproving = nextStatus === "APPROVED";
+      let approvalCompleted = false;
+      setUpdatingOrderId(order.id);
       setError("");
       setSuccess("");
-      try {
-        await api<{ success: boolean; data: Order }>(`/api/v1/orders/${orderId}`, {
-          method: "PUT",
-          body: { status: nextStatus },
+      if (isApproving) {
+        setWhatsAppDeliveryPopup({
+          orderNumber: order.order_number,
+          status: "sending",
+          detail: "Approving the order and sending its secure confirmation link automatically…",
+          partyName: order.buyer?.name || undefined,
         });
-        setSuccess(`Order status updated to ${nextStatus}.`);
+      }
+      try {
+        if (isApproving) {
+          await api<{ success: boolean; data: Order }>(`/api/v1/orders/${order.id}/approve`, {
+            method: "POST",
+            body: {},
+          });
+          approvalCompleted = true;
+
+          const share = await api<{ success: boolean; data: ShareApprovalData }>(
+            `/api/v1/orders/${order.id}/share-approval`,
+            { method: "POST", body: {} },
+          );
+          const delivery = share?.data?.whatsapp_delivery;
+          if (delivery?.status !== "sent") {
+            throw new Error("WhatsApp did not confirm the automatic send.");
+          }
+
+          setWhatsAppDeliveryPopup({
+            orderNumber: order.order_number,
+            status: "sent",
+            detail: "The secure order-confirmation link was sent automatically.",
+            partyName: share.data.party?.name || order.buyer?.name || undefined,
+            to: delivery.to,
+            messageId: delivery.message_id,
+          });
+          setSuccess(`${order.order_number} approved · WhatsApp sent automatically.`);
+          fetchApprovals();
+        } else {
+          await api<{ success: boolean; data: Order }>(`/api/v1/orders/${order.id}`, {
+            method: "PUT",
+            body: { status: nextStatus },
+          });
+          setSuccess(`Order status updated to ${nextStatus}.`);
+        }
         fetchOrders();
         fetchPendingOrders();
         fetchApprovedOrders();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to update order status");
+        const detail = err instanceof Error ? err.message : "Failed to update order status";
+        if (isApproving) {
+          setWhatsAppDeliveryPopup({
+            orderNumber: order.order_number,
+            status: approvalCompleted ? "send_failed" : "approval_failed",
+            detail: approvalCompleted
+              ? `The order is approved, but WhatsApp could not send the link: ${detail}`
+              : `The order was not approved: ${detail}`,
+            partyName: order.buyer?.name || undefined,
+          });
+          setError(approvalCompleted ? `WhatsApp delivery failed: ${detail}` : detail);
+          if (approvalCompleted) {
+            fetchOrders();
+            fetchPendingOrders();
+            fetchApprovedOrders();
+          }
+        } else {
+          setError(detail);
+        }
       } finally {
         setUpdatingOrderId(null);
       }
@@ -1333,6 +1377,94 @@ export default function NewInvoicePage() {
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Inter','system-ui',sans-serif" }}>
+      {whatsAppDeliveryPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="whatsapp-delivery-title">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl">
+            <div className={`px-6 py-5 ${whatsAppDeliveryPopup.status === "sent"
+              ? "bg-emerald-50"
+              : whatsAppDeliveryPopup.status === "sending"
+                ? "bg-amber-50"
+                : "bg-rose-50"
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white ${whatsAppDeliveryPopup.status === "sent"
+                  ? "bg-[#25D366]"
+                  : whatsAppDeliveryPopup.status === "sending"
+                    ? "bg-amber-500"
+                    : "bg-rose-500"
+                }`}>
+                  {whatsAppDeliveryPopup.status === "sending"
+                    ? <Loader2 className="h-5 w-5 animate-spin" />
+                    : whatsAppDeliveryPopup.status === "sent"
+                      ? <WhatsAppIcon className="h-5 w-5" />
+                      : <AlertTriangle className="h-5 w-5" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 id="whatsapp-delivery-title" className="text-lg font-bold text-zinc-900">
+                    {whatsAppDeliveryPopup.status === "sending"
+                      ? "Sending automatically"
+                      : whatsAppDeliveryPopup.status === "sent"
+                        ? "Order approved & WhatsApp sent"
+                        : whatsAppDeliveryPopup.status === "send_failed"
+                          ? "Order approved · WhatsApp failed"
+                          : "Approval failed"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-zinc-600">{whatsAppDeliveryPopup.detail}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 px-6 py-5 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-zinc-500">Order</span>
+                <span className="font-semibold text-zinc-900">{whatsAppDeliveryPopup.orderNumber}</span>
+              </div>
+              {whatsAppDeliveryPopup.partyName && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-zinc-500">Party</span>
+                  <span className="truncate font-semibold text-zinc-900">{whatsAppDeliveryPopup.partyName}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-zinc-500">WhatsApp delivery</span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${whatsAppDeliveryPopup.status === "sent"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : whatsAppDeliveryPopup.status === "sending"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-rose-100 text-rose-700"
+                }`}>
+                  {whatsAppDeliveryPopup.status === "sent" ? "SENT" : whatsAppDeliveryPopup.status === "sending" ? "SENDING" : "FAILED"}
+                </span>
+              </div>
+              {whatsAppDeliveryPopup.to && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-zinc-500">Sent to</span>
+                  <span className="font-mono font-semibold text-zinc-900">+{whatsAppDeliveryPopup.to}</span>
+                </div>
+              )}
+              {whatsAppDeliveryPopup.messageId && (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-zinc-500">Message reference</span>
+                  <span className="max-w-[220px] truncate font-mono text-xs font-semibold text-zinc-700">{whatsAppDeliveryPopup.messageId}</span>
+                </div>
+              )}
+            </div>
+
+            {whatsAppDeliveryPopup.status !== "sending" && (
+              <div className="border-t border-zinc-100 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppDeliveryPopup(null)}
+                  className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold text-white transition ${whatsAppDeliveryPopup.status === "sent" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-zinc-900 hover:bg-zinc-800"}`}
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-zinc-200 bg-gradient-to-r from-white to-amber-50/40 p-6 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Create Order</h1>
         <p className="mt-1 text-sm text-zinc-600">GST-compliant order workflow with smart TD/CD and dues visibility</p>
@@ -2712,7 +2844,7 @@ export default function NewInvoicePage() {
                                       return (
                                         <button
                                           key={s}
-                                          onClick={(e) => { e.stopPropagation(); updateOrderStatus(order.id, s); }}
+                                          onClick={(e) => { e.stopPropagation(); updateOrderStatus(order, s); }}
                                           disabled={updatingOrderId === order.id}
                                           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer disabled:opacity-50 ${color}`}
                                           style={{ fontSize: "0.8rem" }}
@@ -2724,18 +2856,6 @@ export default function NewInvoicePage() {
                                     })
                                 }
                               </div>
-                              {section.status === "APPROVED" && (
-                                <button
-                                  onClick={(e) => openShareApproval(order, e)}
-                                  disabled={sharingOrderId === order.id}
-                                  title="Send to party on WhatsApp for confirmation"
-                                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#25D366] text-white px-2.5 py-1.5 font-semibold hover:brightness-95 transition disabled:opacity-60"
-                                  style={{ fontSize: "0.8rem" }}
-                                >
-                                  {sharingOrderId === order.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <WhatsAppIcon className="w-3.5 h-3.5" />}
-                                  <span className="hidden sm:inline">Send</span>
-                                </button>
-                              )}
                               <ChevronRight
                                 className={`w-4 h-4 text-zinc-500 shrink-0 transition-transform cursor-pointer ${isExpanded ? "rotate-90" : ""}`}
                                 onClick={(e) => { e.stopPropagation(); setExpandedOrder(isExpanded ? null : order.id); }}

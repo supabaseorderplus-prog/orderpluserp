@@ -36,6 +36,9 @@ const evolutionConfig = () => ({
   appOrigin: (process.env.WHATSAPP_APP_ORIGIN || 'http://localhost:3001').trim(),
 })
 
+let webhookConfigured = false
+let webhookConfigurationPromise: Promise<boolean> | null = null
+
 export function normalizeWhatsAppNumber(raw: string): string {
   const digits = String(raw || '').replace(/\D/g, '')
   if (!digits) return ''
@@ -135,6 +138,48 @@ function isConnectedState(state: string): boolean {
   return ['open', 'connected', 'online'].includes(state.toLowerCase())
 }
 
+function deliveryWebhookUrl(): string {
+  const config = evolutionConfig()
+  const configured = (process.env.WHATSAPP_WEBHOOK_URL || '').trim()
+  const target = new URL(configured || '/api/v1/whatsapp/webhook', config.appOrigin)
+  // Evolution runs in Docker locally, where localhost points back to the
+  // container. host.docker.internal reaches this Next.js application.
+  if (!configured && ['localhost', '127.0.0.1'].includes(target.hostname)) {
+    target.hostname = 'host.docker.internal'
+  }
+  return target.toString()
+}
+
+export async function ensureWhatsAppDeliveryWebhook(): Promise<boolean> {
+  if (webhookConfigured) return true
+  if (webhookConfigurationPromise) return webhookConfigurationPromise
+  const config = evolutionConfig()
+  if (!config.apiKey) return false
+
+  webhookConfigurationPromise = (async () => {
+    await evolutionRequest(`/webhook/set/${encodeURIComponent(config.instanceName)}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        webhook: {
+          enabled: true,
+          url: deliveryWebhookUrl(),
+          webhookByEvents: false,
+          webhookBase64: false,
+          events: ['MESSAGES_UPDATE', 'SEND_MESSAGE'],
+          headers: { Authorization: `Bearer ${process.env.WHATSAPP_WEBHOOK_SECRET || config.apiKey}` },
+        },
+      }),
+    })
+    webhookConfigured = true
+    return true
+  })().catch((error) => {
+    console.warn('[whatsapp] delivery webhook configuration failed:', error instanceof Error ? error.message : error)
+    return false
+  }).finally(() => { webhookConfigurationPromise = null })
+
+  return webhookConfigurationPromise
+}
+
 export async function getWhatsAppConnection(): Promise<WhatsAppConnection> {
   const config = evolutionConfig()
   if (!config.apiKey) {
@@ -152,6 +197,7 @@ export async function getWhatsAppConnection(): Promise<WhatsAppConnection> {
   try {
     const body = await evolutionRequest(`/instance/connectionState/${encodeURIComponent(config.instanceName)}`, { method: 'GET' })
     const state = connectionState(body)
+    if (isConnectedState(state)) await ensureWhatsAppDeliveryWebhook()
     return {
       configured: true,
       connected: isConnectedState(state),
@@ -198,6 +244,7 @@ export async function startWhatsAppConnection(): Promise<WhatsAppConnection> {
 
   const state = connectionState(body)
   const qr = qrDataUri(findString(body, ['base64', 'qrcode', 'qrCode', 'code']))
+  if (isConnectedState(state)) await ensureWhatsAppDeliveryWebhook()
   return {
     configured: true,
     connected: isConnectedState(state),

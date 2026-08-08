@@ -21,6 +21,14 @@ export async function POST(
 
     const { id } = await params
 
+    const normalizedRole = (authUser.role || '').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+    if (normalizedRole === 'SALESMAN') {
+      return NextResponse.json(
+        { success: false, message: 'Salesmen are not allowed to approve orders' },
+        { status: 403 },
+      )
+    }
+
     // Get order
     const { data: order, error } = await supabaseAdmin
       .from('orders')

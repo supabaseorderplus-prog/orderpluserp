@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     .from('company_notes')
     .select('id, note, created_at, updated_at')
     .eq('company_id', companyId)
+    .not('note', 'like', 'SYSTEM%')
     .order('created_at', { ascending: false })
 
   if (error) {

@@ -7,7 +7,7 @@ import {
   loadPartyContact,
   resolveSupportCompanyId,
 } from '@/lib/support-chat'
-import { sendWhatsAppMessage } from '@/lib/whatsapp-automation'
+import { sendTrackedWhatsAppMessage } from '@/lib/whatsapp-message-log'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -54,14 +54,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         : { admin_unread_count: Number(conversation.admin_unread_count || 0) + 1 }),
     }).eq('id', id)
 
-    const recipient = admin
-      ? await loadPartyContact(conversation.party_id)
-      : await loadPartyContact(companyId)
+    const conversationParty = await loadPartyContact(conversation.party_id)
+    const recipient = admin ? conversationParty : await loadPartyContact(companyId)
     let whatsappDelivery: unknown = null
     let whatsappWarning: string | null = null
     if (recipient?.phone) {
       try {
-        whatsappDelivery = await sendWhatsAppMessage({
+        whatsappDelivery = await sendTrackedWhatsAppMessage({
           to: recipient.phone,
           message: buildSupportWhatsAppMessage({
             ticketNumber: conversation.ticket_number,
@@ -70,6 +69,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             senderName,
             body: message,
           }),
+          companyId,
+          partyId: conversation.party_id,
+          partyName: conversationParty?.name || conversation.created_by_name || 'Party',
+          recipientName: recipient.name,
+          messageType: 'SUPPORT_NOTIFICATION',
+          referenceType: 'SUPPORT',
+          referenceId: id,
+          referenceNumber: conversation.ticket_number,
+          createdByUserId: user.app_user_id || user.id,
         })
       } catch (deliveryError) {
         whatsappWarning = deliveryError instanceof Error ? deliveryError.message : 'The WhatsApp notification could not be sent.'

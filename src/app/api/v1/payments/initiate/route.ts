@@ -6,7 +6,8 @@ import {
   type PaymentApprovalScheme,
   type PendingPaymentPayload,
 } from '@/lib/payment-approval-links'
-import { sendWhatsAppMessage, WhatsAppAutomationError } from '@/lib/whatsapp-automation'
+import { WhatsAppAutomationError } from '@/lib/whatsapp-automation'
+import { sendTrackedWhatsAppMessage } from '@/lib/whatsapp-message-log'
 
 type InvoiceSnapshot = {
   id: string
@@ -178,7 +179,18 @@ export async function POST(req: NextRequest) {
       `*Review detailed PDF:*\n${pdfUrl}\n\n` +
       `*Approve payment (no login needed):*\n${approvalUrl}\n\n` +
       `The payment will be posted only after your approval. Both secure links expire immediately after approval or automatically in 72 hours.`
-    const delivery = await sendWhatsAppMessage({ to: phone, message })
+    const delivery = await sendTrackedWhatsAppMessage({
+      to: phone,
+      message,
+      companyId: companyId || null,
+      partyId: raw.party_id,
+      partyName: record.party_name,
+      recipientName: record.party_name,
+      messageType: 'PAYMENT_APPROVAL',
+      referenceType: 'PAYMENT',
+      referenceNumber: record.request_number,
+      createdByUserId: authUser.app_user_id || authUser.id,
+    })
 
     return NextResponse.json({
       success: true,

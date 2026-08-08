@@ -10,7 +10,7 @@ import {
   notifyCompanyAdmins,
   resolveSupportCompanyId,
 } from '@/lib/support-chat'
-import { sendWhatsAppMessage } from '@/lib/whatsapp-automation'
+import { sendTrackedWhatsAppMessage } from '@/lib/whatsapp-message-log'
 
 export const dynamic = 'force-dynamic'
 
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
     let whatsappWarning: string | null = null
     if (companyContact?.phone) {
       try {
-        whatsappDelivery = await sendWhatsAppMessage({
+        whatsappDelivery = await sendTrackedWhatsAppMessage({
           to: companyContact.phone,
           message: buildSupportWhatsAppMessage({
             ticketNumber: conversation.ticket_number,
@@ -190,6 +190,15 @@ export async function POST(req: NextRequest) {
             senderName: creatorName,
             body: initialMessage,
           }),
+          companyId,
+          partyId: user.party_id,
+          partyName: party?.name || creatorName,
+          recipientName: companyContact.name,
+          messageType: 'SUPPORT_NOTIFICATION',
+          referenceType: 'SUPPORT',
+          referenceId: conversation.id,
+          referenceNumber: conversation.ticket_number,
+          createdByUserId: user.app_user_id || user.id,
         })
       } catch (error) {
         whatsappWarning = error instanceof Error ? error.message : 'The WhatsApp notification could not be sent.'

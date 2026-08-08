@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, getUserFromToken, resolveCompanyScope, getPartyDescendants, type AuthUser } from '@/lib/supabase-server'
 import { getScopedPartyIdsForUser } from '@/lib/party-scope'
 import { createApprovalToken, getApprovalSummaries } from '@/lib/order-approval-links'
-import { normalizeWhatsAppNumber, sendWhatsAppMessage, WhatsAppAutomationError } from '@/lib/whatsapp-automation'
+import { normalizeWhatsAppNumber, WhatsAppAutomationError } from '@/lib/whatsapp-automation'
+import { sendTrackedWhatsAppMessage } from '@/lib/whatsapp-message-log'
 
 // Approval links live under the *minter's* party scope, so the confirmation
 // status must be read across the whole party tree (same scope as the orders
@@ -173,7 +174,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       `*Order PDF:*\n${pdfUrl}\n\n` +
       `*Review & confirm (no login needed):*\n${approvalUrl}\n\n` +
       `Both secure links expire immediately after confirmation.`
-    const delivery = await sendWhatsAppMessage({ to: waNumber, message })
+    const delivery = await sendTrackedWhatsAppMessage({
+      to: waNumber,
+      message,
+      companyId: companyId ?? null,
+      partyId,
+      partyName,
+      recipientName: partyName,
+      messageType: purpose === 'INVOICE' ? 'INVOICE_REVIEW' : 'ORDER_APPROVAL',
+      referenceType: purpose === 'INVOICE' ? 'INVOICE' : 'ORDER',
+      referenceId: id,
+      referenceNumber: record.order_number,
+      createdByUserId: authUser.app_user_id || authUser.id,
+    })
 
     return NextResponse.json({
       success: true,
