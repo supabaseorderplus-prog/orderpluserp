@@ -268,7 +268,7 @@ export default function LeafletTrailMap({ trail, salesman, fallbackLat = 20.5937
   }, [trail, salesman, fallbackLat, fallbackLng, liveLocation, weather]);
 
   return (
-    <div className="relative w-full" style={{ height: 460 }}>
+    <div className="relative isolate z-0 w-full overflow-hidden rounded-xl" style={{ height: 460 }}>
       <style>{`
         @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
         @keyframes ping {

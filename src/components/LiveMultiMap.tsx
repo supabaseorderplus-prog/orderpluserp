@@ -778,7 +778,7 @@ export default function LiveMultiMap({
   }, [mapReady, trail, selectedUserId, routeStops]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative isolate z-0 h-full w-full overflow-hidden">
       <style>{`
         @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
         @keyframes lmmPing {
