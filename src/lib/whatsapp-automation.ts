@@ -102,6 +102,9 @@ async function evolutionRequest<T = unknown>(path: string, init: RequestInit = {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        // ngrok's free development domain can show an interstitial to browser-like
+        // clients. API requests opt out so Evolution responses stay machine-readable.
+        'ngrok-skip-browser-warning': 'true',
         Origin: config.appOrigin,
         apikey: config.apiKey,
         ...init.headers,

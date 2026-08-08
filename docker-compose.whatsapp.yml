@@ -61,6 +61,20 @@ services:
     volumes:
       - evolution_instances:/evolution/instances
 
+  # Publishes Evolution API through the free, account-assigned ngrok domain.
+  # Keeping this in the same Compose stack makes the tunnel recover together
+  # with the WhatsApp service after Docker Desktop or the Mac restarts.
+  evolution-tunnel:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    depends_on:
+      - evolution-api
+    command: ["http", "evolution-api:8080", "--log=stdout"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Set NGROK_AUTHTOKEN}
+    ports:
+      - "127.0.0.1:4040:4040"
+
 volumes:
   evolution_postgres_data:
   evolution_redis_data:

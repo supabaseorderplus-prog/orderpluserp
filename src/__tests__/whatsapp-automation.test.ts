@@ -33,7 +33,10 @@ describe('WhatsApp automation', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ number: '919876543210', text: 'Approval link', linkPreview: true }),
-        headers: expect.objectContaining({ apikey: 'test-key' }),
+        headers: expect.objectContaining({
+          apikey: 'test-key',
+          'ngrok-skip-browser-warning': 'true',
+        }),
       }),
     )
   })
