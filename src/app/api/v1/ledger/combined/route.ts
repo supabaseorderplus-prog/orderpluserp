@@ -94,11 +94,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const ids = await resolveScopedPartyIds(req);
-    if (ids === null || ids.length === 0) {
+    const scopedIds = await resolveScopedPartyIds(req);
+    if (scopedIds === null || scopedIds.length === 0) {
       return NextResponse.json({ success: true, data: { transactions: [] } });
     }
 
+    const requestedPartyId = req.nextUrl.searchParams.get("party_id")?.trim();
+    if (requestedPartyId && !scopedIds.includes(requestedPartyId)) {
+      return NextResponse.json(
+        { success: false, message: "You do not have access to this party ledger" },
+        { status: 403 },
+      );
+    }
+
+    // A party-card ledger link must never return the combined company ledger.
+    // Restrict at the API boundary as well as in the UI so the response itself
+    // contains transactions for only the requested, authorised party.
+    const ids = requestedPartyId ? [requestedPartyId] : scopedIds;
     const transactions = await getCachedLedger(ids);
     return NextResponse.json({ success: true, data: { transactions } });
   } catch (error: unknown) {

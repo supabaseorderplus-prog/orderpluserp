@@ -58,13 +58,14 @@ interface PaymentAllocationDetail {
 
 export default function LedgersPage() {
   const searchParams = useSearchParams();
+  const requestedPartyId = searchParams.get("party_id")?.trim() || null;
   const [parties, setParties] = useState<Party[]>([]);
   const [salesmenData, setSalesmenData] = useState<Omit<Salesman, 'partyCount'>[]>([]);
   const [transactions, setTransactions] = useState<CombinedTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search] = useState("");
-  const [selectedParty, setSelectedParty] = useState("all");
+  const [selectedParty, setSelectedParty] = useState(() => requestedPartyId || "all");
   const [selectedSalesman, setSelectedSalesman] = useState("all");
 
   // Delete a payment transaction. Deleting the payment row reverses the party's
@@ -111,14 +112,8 @@ export default function LedgersPage() {
   }, []);
 
   useEffect(() => {
-    const partyIdFromQuery = searchParams.get("party_id");
-    if (partyIdFromQuery) setSelectedParty(partyIdFromQuery);
-  }, [searchParams]);
-
-  // Reset party selection when salesman changes
-  useEffect(() => {
-    setSelectedParty("all");
-  }, [selectedSalesman]);
+    setSelectedParty(requestedPartyId || "all");
+  }, [requestedPartyId]);
 
   // Reusable loader so a delete (or any mutation) can refresh balances without
   // a full page reload. `cancelledRef` guards the initial mount unmount race.
@@ -144,7 +139,9 @@ export default function LedgersPage() {
       // exhausted the connection pool and — with no per-request timeout — a
       // single hung call left the page stuck on "Loading combined ledger…".
       const ledgerRes = await api<{ success: boolean; data: { transactions: CombinedTransaction[] } }>(
-        "/api/v1/ledger/combined",
+        requestedPartyId
+          ? `/api/v1/ledger/combined?party_id=${encodeURIComponent(requestedPartyId)}`
+          : "/api/v1/ledger/combined",
       );
       setTransactions(ledgerRes.data?.transactions || []);
     } catch (err) {
@@ -268,8 +265,12 @@ export default function LedgersPage() {
   }, [salesmen, salesmanSearch]);
 
   const selectedPartyName = useMemo(() =>
-    selectedParty === "all" ? null : parties.find(p => p.id === selectedParty)?.name || null,
-    [parties, selectedParty]
+    selectedParty === "all"
+      ? null
+      : parties.find(p => p.id === selectedParty)?.name
+        || transactions.find(tx => tx.partyId === selectedParty)?.partyName
+        || null,
+    [parties, transactions, selectedParty]
   );
   const selectedSalesmanName = useMemo(() =>
     selectedSalesman === "all" ? null : salesmen.find(s => s.id === selectedSalesman)?.name || null,
@@ -387,8 +388,14 @@ export default function LedgersPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-1">Ledgers</h1>
-          <p className="text-sm text-zinc-500">Combined transaction history of the whole application</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-1">
+            {requestedPartyId ? `${selectedPartyName || "Party"} Ledger` : "Ledgers"}
+          </h1>
+          <p className="text-sm text-zinc-500">
+            {requestedPartyId
+              ? `Transaction history for ${selectedPartyName || "this party"} only`
+              : "Combined transaction history of the whole application"}
+          </p>
         </div>
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2 text-sm font-semibold text-amber-600">
           {filteredTransactions.length} records
@@ -410,10 +417,19 @@ export default function LedgersPage() {
         </div>
         <div className="rounded-xl border border-black/[0.06] bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Parties Covered</p>
-          <p className="mt-1 font-bold text-zinc-900">{selectedSalesman === "all" ? parties.length : partiesForSalesman.length}</p>
+          <p className="mt-1 font-bold text-zinc-900">{requestedPartyId ? 1 : selectedSalesman === "all" ? parties.length : partiesForSalesman.length}</p>
         </div>
       </div>
 
+      {requestedPartyId ? (
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+          <BookOpen className="h-4 w-4 shrink-0 text-blue-600" />
+          <div>
+            <p className="text-sm font-semibold text-blue-800">{selectedPartyName || "Selected party"}</p>
+            <p className="text-xs text-blue-700/70">Showing this party&apos;s ledger only</p>
+          </div>
+        </div>
+      ) : (
       <div className="mb-5 rounded-xl border border-black/[0.06] bg-white p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
@@ -509,6 +525,7 @@ export default function LedgersPage() {
           </div>
         )}
       </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-zinc-500">
@@ -524,7 +541,7 @@ export default function LedgersPage() {
       ) : (
         <div className="rounded-xl border border-black/[0.06] bg-white overflow-hidden">
           <div className="flex items-center gap-2 border-b border-black/[0.06] bg-black/[0.02] px-4 py-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
-            <Filter className="h-3.5 w-3.5" /> Combined Transaction History
+            <Filter className="h-3.5 w-3.5" /> {requestedPartyId ? `${selectedPartyName || "Party"} Transaction History` : "Combined Transaction History"}
           </div>
           <div className="overflow-x-auto" style={{ maxHeight: "calc(100vh - 340px)", overflowY: "auto" }}>
             <table className="no-mobile-scroll w-full" style={{ borderCollapse: "collapse" }}>
