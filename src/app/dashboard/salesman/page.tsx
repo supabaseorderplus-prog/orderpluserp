@@ -15,6 +15,7 @@ const LeafletTrailMap = dynamic(() => import("@/components/LeafletTrailMap"), {
 import { publishLocation, disconnectMqtt } from "@/lib/mqtt-client";
 import { evaluateTrackingSegment, MAX_ACCEPTABLE_ACCURACY_M } from "@/lib/tracking-integrity";
 import type { SalesmanGpsStatus } from "@/components/SalesmanGpsGuardian";
+import { OdometerCaptureModal, type OdometerCapture } from "@/components/OdometerCaptureModal";
 import { getAndroidNativePlugin } from "@/lib/capacitor-native-plugin";
 import Link from "next/link";
 import {
@@ -145,6 +146,9 @@ interface DutySession {
   check_out_time: string | null;
   total_distance_km: number;
   total_stops: number;
+  start_odometer_km: number | null;
+  end_odometer_km: number | null;
+  odometer_distance_km: number | null;
 }
 
 interface ActiveRouteVisit {
@@ -290,6 +294,7 @@ export default function SalesmanDashboard() {
   const [schemesLoading, setSchemesLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [showEndDutyConfirm, setShowEndDutyConfirm] = useState(false);
+  const [odometerPhase, setOdometerPhase] = useState<"start" | "end" | null>(null);
   const [endDutyReason, setEndDutyReason] = useState("");
   const [activeRouteRun, setActiveRouteRun] = useState<ActiveRouteRun | null>(null);
   const [activeRouteStops, setActiveRouteStops] = useState<ActiveRouteStop[]>([]);
@@ -732,7 +737,7 @@ export default function SalesmanDashboard() {
   }, [session?.id]);
 
   // ── Start duty ─────────────────────────────────────────────────────────────
-  const startDuty = async () => {
+  const startDuty = async (odometer: OdometerCapture) => {
     setLocationError("");
     setDutyLoading(true);
 
@@ -742,7 +747,13 @@ export default function SalesmanDashboard() {
       const position = await preciseCurrentPosition();
       const res = await api<{ data: DutySession }>("/api/v1/duty/session", {
         method: "POST",
-        body: { latitude: position.coords.latitude, longitude: position.coords.longitude },
+        body: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          start_odometer_km: odometer.reading,
+          start_odometer_photo_path: odometer.photoPath,
+          start_odometer_ocr_confidence: odometer.confidence,
+        },
       });
       setSession(res.data);
       distanceRef.current = 0;
@@ -750,10 +761,13 @@ export default function SalesmanDashboard() {
       lastPosRef.current = null;
       startWatchPosition();
       notifySW("DUTY_START");
+      setOdometerPhase(null);
     } catch (error) {
       if (nativeStarted) await getNativeBGLocation()?.stopTracking().catch(() => {});
       const message = error instanceof Error ? error.message : "";
-      setLocationError(message || "Precise GPS permission and Location Services are required before starting duty.");
+      const finalMessage = message || "Precise GPS permission and Location Services are required before starting duty.";
+      setLocationError(finalMessage);
+      throw new Error(finalMessage);
     } finally {
       setDutyLoading(false);
     }
@@ -766,7 +780,7 @@ export default function SalesmanDashboard() {
     void fetchActiveRoute();
   };
 
-  const confirmEndDuty = async () => {
+  const confirmEndDuty = async (odometer: OdometerCapture) => {
     setDutyLoading(true);
     setLocationError("");
     try {
@@ -778,15 +792,21 @@ export default function SalesmanDashboard() {
           longitude: position?.coords.longitude ?? null,
           status: "checked_out",
           total_distance_km: distanceRef.current,
+          end_odometer_km: odometer.reading,
+          end_odometer_photo_path: odometer.photoPath,
+          end_odometer_ocr_confidence: odometer.confidence,
         },
       });
       setSession(res.data);
       setShowEndDutyConfirm(false);
+      setOdometerPhase(null);
       stopWatchPosition();
       notifySW("DUTY_END");
       await getNativeBGLocation()?.stopTracking().catch(() => {});
     } catch (error) {
-      setLocationError(error instanceof Error ? error.message : "Failed to end duty. Try again.");
+      const message = error instanceof Error ? error.message : "Failed to end duty. Try again.";
+      setLocationError(message);
+      throw new Error(message);
     } finally {
       setDutyLoading(false);
     }
@@ -933,17 +953,25 @@ export default function SalesmanDashboard() {
 
         {/* Session stats */}
         {session && (
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[
-              { label: "Check In", value: fmtTime(session.check_in_time) },
-              { label: "Duration", value: elapsed },
-              { label: "Distance", value: `${liveDistance.toFixed(1)} km` },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-black/[0.04] border border-black/[0.06] py-2 px-3 text-center">
-                <div className="text-zinc-900 text-sm font-semibold">{s.value}</div>
-                <div className="text-zinc-500 text-[0.6rem] mt-0.5">{s.label}</div>
+          <div className="mb-4 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Check In", value: fmtTime(session.check_in_time) },
+                { label: "Duration", value: elapsed },
+                { label: isOnDuty ? "GPS Distance" : "Driven Today", value: `${(isOnDuty ? liveDistance : session.odometer_distance_km ?? session.total_distance_km ?? 0).toFixed(1)} km` },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl bg-black/[0.04] border border-black/[0.06] py-2 px-3 text-center">
+                  <div className="text-zinc-900 text-sm font-semibold">{s.value}</div>
+                  <div className="text-zinc-500 text-[0.6rem] mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {session.start_odometer_km != null && (
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs">
+                <span className="flex items-center gap-1.5 font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Start odometer verified</span>
+                <span className="font-bold tabular-nums text-zinc-900">{Number(session.start_odometer_km).toLocaleString("en-IN")} km</span>
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -1090,7 +1118,7 @@ export default function SalesmanDashboard() {
         {/* Action button */}
         {session?.status !== "checked_out" && (
           <button
-            onClick={isOnDuty ? endDuty : startDuty}
+            onClick={isOnDuty ? endDuty : () => setOdometerPhase("start")}
             disabled={dutyLoading}
             className={`w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-semibold text-sm transition-all ${
               isOnDuty
@@ -1119,8 +1147,8 @@ export default function SalesmanDashboard() {
                 <div className="text-zinc-500 text-[0.6rem] mt-0.5">Total Duration</div>
               </div>
               <div className="rounded-xl bg-black/[0.04] border border-black/[0.06] py-2 px-3 text-center">
-                <div className="text-zinc-900 text-sm font-semibold">{(session.total_distance_km || 0).toFixed(1)} km</div>
-                <div className="text-zinc-500 text-[0.6rem] mt-0.5">Total Distance</div>
+                <div className="text-zinc-900 text-sm font-semibold">{(session.odometer_distance_km ?? session.total_distance_km ?? 0).toFixed(1)} km</div>
+                <div className="text-zinc-500 text-[0.6rem] mt-0.5">Odometer Distance</div>
               </div>
             </div>
           </div>
@@ -1416,7 +1444,10 @@ export default function SalesmanDashboard() {
                   </button>
                 ) : (
                   <button
-                    onClick={confirmEndDuty}
+                    onClick={() => {
+                      setShowEndDutyConfirm(false);
+                      setOdometerPhase("end");
+                    }}
                     disabled={dutyLoading}
                     className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{ fontSize: "0.85rem", fontFamily: "inherit", border: "none", cursor: "pointer" }}
@@ -1429,6 +1460,15 @@ export default function SalesmanDashboard() {
           </div>
         );
       })()}
+
+      {odometerPhase && (
+        <OdometerCaptureModal
+          phase={odometerPhase}
+          startReading={session?.start_odometer_km}
+          onClose={() => setOdometerPhase(null)}
+          onConfirm={odometerPhase === "start" ? startDuty : confirmEndDuty}
+        />
+      )}
     </div>
   );
 }

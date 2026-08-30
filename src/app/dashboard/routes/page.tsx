@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getUser, getModulePermission } from "@/lib/api";
 import { getAndroidNativePlugin, isAndroidNativeApp } from "@/lib/capacitor-native-plugin";
+import { OdometerCaptureModal, type OdometerCapture } from "@/components/OdometerCaptureModal";
 import {
   Loader2, MapPin, Route as RouteIcon, Plus, X, Trash2, Edit2, Navigation, Map,
   AlertCircle, Crosshair, Play, ShieldCheck, Radio, CheckCircle2, LockKeyhole,
@@ -248,6 +249,7 @@ interface DutySession {
   check_out_time: string | null;
   total_distance_km: number;
   total_stops: number;
+  start_odometer_km: number | null;
 }
 
 interface RouteRunVisit {
@@ -429,6 +431,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
   const [noteStop, setNoteStop] = useState<RouteStop | null>(null);
   const [visitNote, setVisitNote] = useState("");
   const [visitSaving, setVisitSaving] = useState(false);
+  const [showStartOdometer, setShowStartOdometer] = useState(false);
   const lastPingRef = useRef(0);
 
   const isOnDuty = duty?.status === "active";
@@ -507,7 +510,7 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
     };
   }
 
-  async function startDuty() {
+  async function startDuty(odometer: OdometerCapture) {
     setActionLoading("duty");
     setFieldError("");
     let nativeStarted = false;
@@ -516,17 +519,26 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
       const origin = await ensureFreshLocation();
       const result = await api<{ data: DutySession }>("/api/v1/duty/session", {
         method: "POST",
-        body: { latitude: origin.latitude, longitude: origin.longitude },
+        body: {
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+          start_odometer_km: odometer.reading,
+          start_odometer_photo_path: odometer.photoPath,
+          start_odometer_ocr_confidence: odometer.confidence,
+        },
       });
       setDuty(result.data);
       notifyDutyServiceWorker("DUTY_START");
       setNativeProtected(nativeStarted);
+      setShowStartOdometer(false);
     } catch (error) {
       if (nativeStarted) {
         const plugin = getAndroidNativePlugin<RouteNativeLocationPlugin>("BackgroundLocation");
         await plugin?.stopTracking().catch(() => {});
       }
-      setFieldError(getErrorMessage(error, "Allow precise location access before starting duty."));
+      const message = getErrorMessage(error, "Allow precise location access before starting duty.");
+      setFieldError(message);
+      throw new Error(message);
     } finally {
       setActionLoading(null);
     }
@@ -711,13 +723,14 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
                   <span className="flex items-center gap-1"><Clock3 className="h-3 w-3" /> Started {formatDutyTime(duty.check_in_time)}</span>
                   <span className="flex items-center gap-1"><LocateFixed className="h-3 w-3" /> {location ? `GPS ±${Math.round(location.accuracy || 0)} m` : "Acquiring GPS"}</span>
                   <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> Admin visible</span>
+                  {duty.start_odometer_km != null && <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Odometer {Number(duty.start_odometer_km).toLocaleString("en-IN")} km</span>}
                 </div>
               )}
             </div>
           </div>
           {!isOnDuty && (
             <button
-              onClick={startDuty}
+              onClick={() => setShowStartOdometer(true)}
               disabled={actionLoading === "duty" || fieldLoading}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-zinc-950/15 transition hover:bg-zinc-800 disabled:opacity-50 sm:w-auto"
             >
@@ -892,6 +905,14 @@ function SalesmanRoutesExperience({ routes, loading }: { routes: RouteData[]; lo
             <button onClick={saveVisit} disabled={visitSaving || visitNote.trim().length < 3} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-500 disabled:bg-zinc-200 disabled:text-zinc-400">{visitSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Confirm Party Visited</button>
           </div>
         </div>
+      )}
+
+      {showStartOdometer && (
+        <OdometerCaptureModal
+          phase="start"
+          onClose={() => setShowStartOdometer(false)}
+          onConfirm={startDuty}
+        />
       )}
     </div>
   );

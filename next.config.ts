@@ -20,7 +20,13 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   // Exclude server-only packages from the client bundle
-  serverExternalPackages: ['mqtt', 'bufferutil', 'utf-8-validate'],
+  serverExternalPackages: [
+    'mqtt',
+    'bufferutil',
+    'utf-8-validate',
+    'tesseract.js',
+    '@tesseract.js-data/eng',
+  ],
   async rewrites() {
     if (process.env.NODE_ENV !== 'development') {
       return [];

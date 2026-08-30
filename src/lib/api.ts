@@ -3,6 +3,7 @@ const API_BASE = '';
 interface ApiOptions {
   method?: string;
   body?: unknown;
+  formData?: FormData;
   headers?: Record<string, string>;
   suppressErrorLog?: boolean;
   _retried?: boolean;
@@ -240,16 +241,21 @@ async function apiCore<T = unknown>(path: string, options: ApiOptions = {}): Pro
 
   let res: Response;
   try {
+    const isFormUpload = options.formData instanceof FormData;
     res = await fetch(`${API_BASE}${path}`, {
       method: options.method || 'GET',
       cache: 'no-store',
       headers: {
-        'Content-Type': 'application/json',
+        ...(!isFormUpload ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(companyId ? { 'x-company-id': companyId } : {}),
         ...options.headers,
       },
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      body: isFormUpload
+        ? options.formData
+        : options.body != null
+          ? JSON.stringify(options.body)
+          : undefined,
     });
   } catch (err) {
     console.error('Network error:', err);
