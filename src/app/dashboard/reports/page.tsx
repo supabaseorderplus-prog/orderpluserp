@@ -209,70 +209,140 @@ const SECTIONS: ReportSection[] = [
 export default function ReportsHubPage() {
   const flagship = SECTIONS[0].cards[0];
   const FlagshipIcon = flagship.icon;
+  const totalReports = SECTIONS.reduce((total, section) => total + section.cards.length, 0);
+  const liveReports = SECTIONS.reduce(
+    (total, section) => total + section.cards.filter((card) => card.status === "live").length,
+    0,
+  );
+  const quickReports = [
+    flagship,
+    SECTIONS[1].cards[0],
+    SECTIONS[2].cards[0],
+  ];
 
   return (
-    <div style={{ fontFamily: "'Inter','system-ui',sans-serif" }}>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-zinc-900" style={{ ...s, fontSize: "1.5rem" }}>
-          Reports
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1" style={{ ...s, fontSize: "0.85rem", marginTop: "0.25rem" }}>
-          Every business report in one place — engagement, sales, money and operations.
-        </p>
+    <div className="space-y-6" style={{ fontFamily: "'Inter','system-ui',sans-serif" }}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-amber-600">
+            <FileText className="h-3.5 w-3.5" />
+            Report Centre
+          </div>
+          <h1 className="text-2xl font-bold text-zinc-900" style={{ ...s, fontSize: "1.5rem" }}>
+            Reports
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-zinc-500" style={{ ...s, fontSize: "0.85rem", marginTop: "0.25rem" }}>
+            Organised views for engagement, sales, collections and field operations.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          {[
+            { label: "Reports", value: totalReports },
+            { label: "Live", value: liveReports },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-black/[0.06] bg-white/70 px-4 py-3 shadow-sm">
+              <div className="text-lg font-bold text-zinc-900 tabular-nums" style={{ ...s, fontSize: "1.1rem" }}>
+                {item.value}
+              </div>
+              <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-400">
+                {item.label}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Flagship hero */}
-      <Link
-        href={flagship.href}
-        className="group block rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-5 sm:p-6 mb-8 transition-all hover:border-amber-500/50"
-        style={{ boxShadow: "0 1px 0 rgba(0,0,0,0.02)" }}
-      >
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-            <FlagshipIcon className="w-6 h-6 text-amber-500" />
+      <div className="grid gap-3 lg:grid-cols-[1.25fr_1fr]">
+        <Link
+          href={flagship.href}
+          className="group flex min-h-[150px] flex-col justify-between rounded-xl border border-amber-500/25 bg-white/75 p-5 shadow-sm transition-all hover:border-amber-500/45 hover:shadow-md"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
+                <FlagshipIcon className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide text-emerald-600">
+                  <Activity className="h-3 w-3" /> Live Report
+                </span>
+                <h2 className="text-lg font-bold text-zinc-900" style={{ ...s, fontSize: "1.05rem" }}>
+                  {flagship.title}
+                </h2>
+              </div>
+            </div>
+            <ArrowRight className="hidden h-5 w-5 shrink-0 text-amber-500 transition-transform group-hover:translate-x-1 sm:block" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 text-[0.6rem] font-bold uppercase tracking-wide">
-                <Activity className="w-3 h-3" /> Live
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-600" style={{ fontSize: "0.82rem" }}>
+            {flagship.description}
+          </p>
+        </Link>
+
+        <div className="rounded-xl border border-black/[0.06] bg-white/70 p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-zinc-900" style={{ ...s, fontSize: "0.88rem" }}>
+              Quick Open
+            </h2>
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-400">
+              Most Used
+            </span>
+          </div>
+          <div className="space-y-2">
+            {quickReports.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Link
+                  key={card.key}
+                  href={card.href}
+                  className="group flex items-center gap-3 rounded-lg border border-transparent px-2.5 py-2 transition-all hover:border-black/[0.06] hover:bg-black/[0.025]"
+                >
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.color}`}>
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-zinc-900" style={{ fontSize: "0.8rem" }}>
+                      {card.title}
+                    </div>
+                    <div className="text-[0.68rem] text-zinc-500">
+                      {card.status === "live" ? "Live dashboard" : "Linked report"}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-zinc-300 transition-all group-hover:translate-x-0.5 group-hover:text-zinc-500" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {SECTIONS.map((section) => (
+          <section key={section.title} className="rounded-xl border border-black/[0.06] bg-white/65 p-4 shadow-sm">
+            <div className="mb-4 flex flex-col gap-1 border-b border-black/[0.05] pb-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900" style={{ ...s, fontSize: "0.9rem" }}>
+                  {section.title}
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5" style={{ ...s, fontSize: "0.72rem", marginTop: "0.1rem" }}>
+                  {section.blurb}
+                </p>
+              </div>
+              <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-400">
+                {section.cards.length} reports
               </span>
             </div>
-            <h2 className="text-lg font-bold text-zinc-900" style={{ ...s, fontSize: "1.1rem" }}>
-              {flagship.title}
-            </h2>
-            <p className="text-sm text-zinc-600 mt-1 leading-relaxed" style={{ fontSize: "0.85rem" }}>
-              {flagship.description}
-            </p>
-          </div>
-          <ArrowRight className="w-5 h-5 text-amber-500 shrink-0 transition-transform group-hover:translate-x-1 hidden sm:block" />
-        </div>
-      </Link>
-
-      {/* Sections */}
-      <div className="space-y-8">
-        {SECTIONS.map((section) => (
-          <section key={section.title}>
-            <div className="mb-3">
-              <h3 className="text-sm font-semibold text-zinc-900" style={{ ...s, fontSize: "0.9rem" }}>
-                {section.title}
-              </h3>
-              <p className="text-xs text-zinc-500 mt-0.5" style={{ ...s, fontSize: "0.72rem", marginTop: "0.1rem" }}>
-                {section.blurb}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {section.cards.map((card) => {
                 const Icon = card.icon;
                 return (
                   <Link
                     key={card.key}
                     href={card.href}
-                    className="group rounded-xl border border-black/[0.06] bg-black/[0.02] p-4 transition-all hover:border-black/[0.12] hover:bg-black/[0.03]"
+                    className="group flex min-h-[132px] flex-col rounded-lg border border-black/[0.06] bg-white/80 p-4 transition-all hover:border-amber-500/30 hover:bg-amber-500/[0.03]"
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.color}`}>
-                        <Icon className="w-5 h-5" />
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${card.color}`}>
+                        <Icon className="h-5 w-5" />
                       </div>
                       {card.status === "live" ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[0.55rem] font-bold uppercase tracking-wide">
@@ -285,7 +355,7 @@ export default function ReportsHubPage() {
                     <h4 className="text-sm font-semibold text-zinc-900 leading-snug" style={{ ...s, fontSize: "0.85rem" }}>
                       {card.title}
                     </h4>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed" style={{ fontSize: "0.72rem" }}>
+                    <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-zinc-500" style={{ fontSize: "0.72rem" }}>
                       {card.description}
                     </p>
                   </Link>

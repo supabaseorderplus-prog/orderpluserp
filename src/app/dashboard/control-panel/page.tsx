@@ -37,16 +37,20 @@ import {
   Box,
   ShoppingCart,
   PackageCheck,
+  ClipboardCheck,
+  BookOpenCheck,
 } from "lucide-react";
 
 const MODULE_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   dashboard:      { label: "Dashboard",      icon: LayoutDashboard, color: "text-blue-400" },
+  orders:         { label: "Orders",         icon: ClipboardList,   color: "text-green-500" },
   parties:        { label: "Parties",        icon: Building2,       color: "text-amber-400" },
   vendors:        { label: "Vendors",        icon: Truck,           color: "text-orange-400" },
   invoices:       { label: "Invoices",       icon: ClipboardList,   color: "text-green-400" },
   procurement:    { label: "Procurement",    icon: ShoppingCart,    color: "text-lime-400" },
   delivery_lots:  { label: "Delivery Lots",  icon: PackageCheck,    color: "text-cyan-400" },
   payments:       { label: "Financials",     icon: CreditCard,     color: "text-purple-400" },
+  balance_sheet:  { label: "Balance Sheet",  icon: BookOpenCheck,  color: "text-emerald-500" },
   reconcile:      { label: "Reconcile",      icon: Navigation,      color: "text-cyan-400" },
   products:       { label: "Products",       icon: Package,         color: "text-orange-400" },
   pricing:        { label: "Pricing",        icon: Tag,             color: "text-yellow-400" },
@@ -60,8 +64,10 @@ const MODULE_META: Record<string, { label: string; icon: React.ElementType; colo
   tracking:       { label: "Tracking",      icon: Radar,           color: "text-sky-400" },
   van_tracking:   { label: "Van Tracking",  icon: Truck,           color: "text-teal-300" },
   analytics:      { label: "Analytics",     icon: BarChart3,       color: "text-rose-400" },
+  reports:        { label: "Reports",       icon: BarChart3,       color: "text-indigo-500" },
   users:          { label: "Users",          icon: Users,           color: "text-blue-300" },
   control_panel:  { label: "Control Panel", icon: Settings,        color: "text-amber-300" },
+  approval_requests: { label: "Approval Requests", icon: ClipboardCheck, color: "text-emerald-500" },
   exports:        { label: "Exports",        icon: Box,             color: "text-zinc-600" },
   bom_inventory:  { label: "BOM & Inventory", icon: FlaskConical,  color: "text-violet-400" },
   driver_duty:    { label: "Driver Duty",   icon: Truck,           color: "text-amber-500" },
@@ -370,7 +376,13 @@ m.module_name !== module ? m : { ...m, [field]: !current }
           )}
 
           {/* Module permission cards */}
-            <div className="space-y-2">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <span className="text-[0.68rem] font-bold uppercase tracking-wider text-zinc-500">Modules</span>
+            <span className="text-[0.68rem] text-zinc-500">
+              Showing up to 5 at once · {filteredModules.length} total
+            </span>
+          </div>
+            <div className="max-h-[34rem] space-y-2 overflow-y-scroll rounded-2xl border border-black/[0.06] bg-white/40 p-2 pr-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
               {filteredModules.map((mod) => {
                 const meta = MODULE_META[mod.module_name] || { label: mod.module_name, icon: Settings, color: "text-zinc-600" };
                 const Icon = meta.icon;

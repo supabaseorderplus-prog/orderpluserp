@@ -2167,11 +2167,10 @@ function CompanyDashboardScreen({ company, onBack }: { company: Company; onBack?
       })()}
 
       {/* Primary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: "Today's Billing", value: data.todaySales, icon: IndianRupee, gradient: "from-emerald-500/20 to-emerald-500/5", iconColor: "text-emerald-400", sub: `MTD: ₹${formatINR(data.mtdSales)}` },
-          { label: "YTD Revenue", value: data.ytdSales, icon: TrendingUp, gradient: "from-amber-500/20 to-amber-500/5", iconColor: "text-amber-400", sub: `${data.activeOrders} active invoices` },
-          { label: "Total Outstanding", value: data.outstanding, icon: CreditCard, gradient: "from-red-500/20 to-red-500/5", iconColor: "text-red-400", sub: overdueAmount > 0 ? `₹${formatINR(overdueAmount)} overdue (60d+)` : "All within terms" },
+          { label: "Today Collected", value: data.todayCollection, icon: CreditCard, gradient: "from-emerald-500/20 to-emerald-500/5", iconColor: "text-emerald-400", sub: "Collected from parties today" },
           { label: "MTD Collection", value: data.mtdCollection, icon: Banknote, gradient: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400", sub: `Today: ₹${formatINR(data.todayCollection)}` },
         ].map(kpi => {
           const Icon = kpi.icon;
@@ -2955,11 +2954,10 @@ function RegularDashboard() {
           {/* My Orders — approved orders with live status tracking */}
           {user?.party_id && <MyOrdersSection partyId={user.party_id} />}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         {[
           { label: "Today's Billing", value: data.todaySales, icon: IndianRupee, gradient: "from-emerald-500/20 to-emerald-500/5", iconColor: "text-emerald-400", sub: `MTD: ₹${formatINR(data.mtdSales)}` },
-          { label: "YTD Revenue", value: data.ytdSales, icon: TrendingUp, gradient: "from-amber-500/20 to-amber-500/5", iconColor: "text-amber-400", sub: `${data.activeOrders} active invoices` },
-          { label: "Total Outstanding", value: data.outstanding, icon: CreditCard, gradient: "from-red-500/20 to-red-500/5", iconColor: "text-red-400", sub: overdueAmount > 0 ? `₹${formatINR(overdueAmount)} overdue (60d+)` : "All within terms" },
+          { label: "Today Collected", value: data.todayCollection, icon: CreditCard, gradient: "from-emerald-500/20 to-emerald-500/5", iconColor: "text-emerald-400", sub: "Collected from parties today" },
           { label: "MTD Collection", value: data.mtdCollection, icon: Banknote, gradient: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400", sub: `Today: ₹${formatINR(data.todayCollection)}` },
         ].map(kpi => {
           const Icon = kpi.icon;

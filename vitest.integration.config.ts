@@ -5,15 +5,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    setupFiles: [],
     testTimeout: 30000,
-    exclude: [
-      ...configDefaults.exclude,
-      '**/.claude/**',
+    include: [
       'src/__tests__/diagnostic-api.test.ts',
       'src/__tests__/salesman-dropdown-bug-condition.test.ts',
       'src/__tests__/salesman-dropdown-preservation.test.ts',
     ],
+    exclude: [...configDefaults.exclude, '**/.claude/**'],
   },
   resolve: {
     alias: {

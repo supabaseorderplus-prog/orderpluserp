@@ -75,13 +75,15 @@ const h = vi.hoisted(() => {
   }
 
   const getPartyDescendants = async () => state.treeIds.map((id) => ({ id }))
+  const listAllAuthUsers = async () => state.authUsers
 
-  return { state, supabaseAdmin, getPartyDescendants }
+  return { state, supabaseAdmin, getPartyDescendants, listAllAuthUsers }
 })
 
 vi.mock('@/lib/supabase-server', () => ({
   supabaseAdmin: h.supabaseAdmin,
   getPartyDescendants: h.getPartyDescendants,
+  listAllAuthUsers: h.listAllAuthUsers,
 }))
 
 import { computeRanking } from '@/lib/services/ranking-engine'

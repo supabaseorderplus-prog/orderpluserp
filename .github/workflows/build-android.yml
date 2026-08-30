@@ -1,0 +1,76 @@
+name: Build Salesman Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'salesman-android/**'
+
+# Force consistent SDK paths for all steps
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Java 17 ───────────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 3. Node.js ───────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 4. Accept Android SDK licences & install build tools ─────────────────
+      - name: Accept Android SDK licences
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install Android build tools
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+
+      # ── 5. Install Capacitor dependencies ────────────────────────────────────
+      - name: Install dependencies
+        working-directory: salesman-android
+        run: npm install
+
+      # ── 6. Add Android platform ──────────────────────────────────────────────
+      - name: Add Android platform
+        working-directory: salesman-android
+        run: npx cap add android
+
+      # ── 7. Sync Capacitor config ─────────────────────────────────────────────
+      - name: Sync Capacitor
+        working-directory: salesman-android
+        run: npx cap sync android
+
+      # ── 8. Build debug APK ───────────────────────────────────────────────────
+      # Write local.properties first so sdk.dir matches ANDROID_HOME (no conflict)
+      - name: Build debug APK
+        working-directory: salesman-android/android
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      # ── 9. Upload APK ────────────────────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hometech-salesman-debug
+          path: salesman-android/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

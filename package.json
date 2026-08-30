@@ -10,7 +10,7 @@
     "lint": "eslint",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:bug-condition": "vitest --run src/__tests__/salesman-dropdown-bug-condition.test.ts"
+    "test:bug-condition": "vitest --run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

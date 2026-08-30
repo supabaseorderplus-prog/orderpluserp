@@ -28,9 +28,24 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const today = new Date().toISOString().split('T')[0]
-    const monthStart = today.substring(0, 7) + '-01'
     const now = new Date()
+    const indiaDate = (date: Date) => {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(date)
+      const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+      return `${part('year')}-${part('month')}-${part('day')}`
+    }
+    const today = indiaDate(now)
+    const monthStart = today.substring(0, 7) + '-01'
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const todayStart = `${today}T00:00:00+05:30`
+    const tomorrowStart = `${indiaDate(tomorrow)}T00:00:00+05:30`
+    const monthStartAt = `${monthStart}T00:00:00+05:30`
     const fyStart = now.getMonth() >= 3
       ? `${now.getFullYear()}-04-01`
       : `${now.getFullYear() - 1}-04-01`
@@ -66,10 +81,10 @@ export async function GET(req: NextRequest) {
       mtdPaymentsRes,
     ] = await Promise.all([
       scopeInvoices(
-        supabaseAdmin.from('invoices').select('grand_total').eq('invoice_date', today).not('is_cancelled', 'eq', true)
+        supabaseAdmin.from('invoices').select('grand_total').gte('created_at', todayStart).lt('created_at', tomorrowStart).not('is_cancelled', 'eq', true)
       ),
       scopeInvoices(
-        supabaseAdmin.from('invoices').select('grand_total').gte('invoice_date', monthStart).lte('invoice_date', today).not('is_cancelled', 'eq', true)
+        supabaseAdmin.from('invoices').select('grand_total').gte('created_at', monthStartAt).lt('created_at', tomorrowStart).not('is_cancelled', 'eq', true)
       ),
       scopeInvoices(
         supabaseAdmin.from('invoices').select('grand_total').gte('invoice_date', fyStart).lte('invoice_date', today).not('is_cancelled', 'eq', true)
@@ -124,7 +139,7 @@ export async function GET(req: NextRequest) {
     // Recent invoices enrichment
     const recentInvoices = recentInvoicesRes.data as { billing_party_id: string; [k: string]: unknown }[] | null
     const partyIds = [...new Set(recentInvoices?.map(i => i.billing_party_id).filter(Boolean) || [])]
-    let partyMap: Record<string, string> = {}
+    const partyMap: Record<string, string> = {}
     if (partyIds.length > 0) {
       const { data: parties } = await supabaseAdmin.from('parties').select('id, name').in('id', partyIds)
       parties?.forEach(p => { partyMap[p.id] = p.name })

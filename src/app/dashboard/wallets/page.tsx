@@ -5,10 +5,8 @@ import { api, getUser } from "@/lib/api";
 import { useVisibleInterval } from "@/lib/hooks/use-visible-interval";
 import TransferModal, { type TransferBucket } from "@/components/wallet/TransferModal";
 import WalletHistoryDrawer from "@/components/wallet/WalletHistoryDrawer";
-import ExpenseModal from "@/components/wallet/ExpenseModal";
-import BalanceSheet from "@/components/wallet/BalanceSheet";
 import VendorsTreasury from "@/components/wallet/VendorsTreasury";
-import { Banknote, Building2, Loader2, Tag, TrendingUp, ShieldCheck, Calculator, Wallet, History, X, Check, ArrowDownToLine, Send, Clock, Users, Receipt } from "lucide-react";
+import { Banknote, Building2, Loader2, Tag, TrendingUp, ShieldCheck, Calculator, Wallet, History, X, Check, ArrowDownToLine, Send, Clock, Users } from "lucide-react";
 
 interface WalletData {
   id: string;
@@ -296,9 +294,6 @@ function CustodianCard({ wallet, config, theme, onHistory, isMe }: CustodianCard
 
 export default function WalletsPage() {
   const me = getUser();
-  const normalizedRole = String(me?.role || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_");
-  const isCompanyAdmin = normalizedRole === "ADMIN";
-  const canViewAllExpenseRequests = isCompanyAdmin || normalizedRole === "SUPER_ADMIN";
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -309,12 +304,9 @@ export default function WalletsPage() {
   const [acting, setActing] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
 
-  // Top-level view: live wallet balances vs. the balance-sheet / cash book vs. vendor payables.
-  const [view, setView] = useState<"wallet" | "finances" | "vendors">("wallet");
-  const [expenseOpen, setExpenseOpen] = useState(false);
-  // Bumped whenever an expense is added/removed so the Balance Sheet refetches its
-  // (date-windowed) collection + expense data, which the page itself does not hold.
-  const [financeReload, setFinanceReload] = useState(0);
+  // Top-level view: live wallet balances or vendor payables. The Balance Sheet
+  // now has its own Finance & Accounts page.
+  const [view, setView] = useState<"wallet" | "vendors">("wallet");
 
   // A financer/accountant can forward accepted funds onward to an admin.
   const canForward = me?.role === "ACCOUNTS_MANAGER";
@@ -439,7 +431,7 @@ export default function WalletsPage() {
 
   return (
     <div className="space-y-6" style={{ fontFamily: "'Inter','system-ui',sans-serif" }}>
-      {/* ───────────────── Top view switch: Wallet | Internal Finances ───────────────── */}
+      {/* ───────────────── Top view switch: Wallets | Vendors ───────────────── */}
       <div className="inline-flex rounded-2xl border border-black/[0.06] bg-white p-1 shadow-sm">
         <button
           onClick={() => setView("wallet")}
@@ -447,13 +439,6 @@ export default function WalletsPage() {
           style={{ fontSize: "0.8rem", cursor: "pointer", fontFamily: "inherit", border: "none" }}
         >
           <Wallet className="w-4 h-4" /> Wallets
-        </button>
-        <button
-          onClick={() => setView("finances")}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold transition-all ${view === "finances" ? "bg-zinc-900 text-white shadow" : "text-zinc-500 hover:text-zinc-800"}`}
-          style={{ fontSize: "0.8rem", cursor: "pointer", fontFamily: "inherit", border: "none" }}
-        >
-          <Receipt className="w-4 h-4" /> Balance Sheet
         </button>
         {!isSalesman && (
           <button
@@ -467,16 +452,6 @@ export default function WalletsPage() {
       </div>
 
       {!isSalesman && view === "vendors" && <VendorsTreasury />}
-
-      {view === "finances" && (
-        <BalanceSheet
-          wallets={wallets}
-          onAddExpense={normalizedRole === "SUPER_ADMIN" ? undefined : () => setExpenseOpen(true)}
-          expenseActionLabel={isCompanyAdmin ? "Add Expense" : "Request Expense"}
-          onViewExpenseRequests={canViewAllExpenseRequests ? () => window.location.assign("/dashboard/expenses") : undefined}
-          reloadToken={financeReload}
-        />
-      )}
 
       {view === "wallet" && (
       <>
@@ -756,17 +731,6 @@ export default function WalletsPage() {
         onDone={fetchData}
         defaultBucket="cash"
         available={myAvailable}
-      />
-
-      <ExpenseModal
-        open={expenseOpen}
-        onClose={() => setExpenseOpen(false)}
-        onDone={() => { fetchData(); setFinanceReload((n) => n + 1); }}
-        // Only ever the actor's OWN wallet — no one (admin or accountant) can see
-        // or charge another user's wallet. The server enforces this too.
-        wallets={myWallet ? [myWallet] : []}
-        defaultUserId={me?.id ?? null}
-        requiresApproval={!isCompanyAdmin}
       />
 
       <WalletHistoryDrawer

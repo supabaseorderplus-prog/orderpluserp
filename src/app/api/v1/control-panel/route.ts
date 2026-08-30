@@ -10,6 +10,7 @@ const ALL_MODULES = [
   "procurement",
   "delivery_lots",
   "payments",
+  "balance_sheet",
   "reconcile",
   "products",
   "pricing",
@@ -17,13 +18,16 @@ const ALL_MODULES = [
   "security",
   "schemes",
   "rankings",
+  "groups",
   "downline",
   "routes",
   "tracking",
   "van_tracking",
   "analytics",
+  "reports",
   "users",
   "control_panel",
+  "approval_requests",
   "exports",
   "bom_inventory",
   "driver_duty",
@@ -133,7 +137,7 @@ export async function PATCH(req: NextRequest) {
     if (existing?.id) {
       const { error } = await supabaseAdmin
         .from("permissions")
-        .update({ [field]: value, updated_at: new Date().toISOString() })
+        .update({ [field]: value, status: "ACTIVE", updated_at: new Date().toISOString() })
         .eq("id", existing.id);
       if (error) return NextResponse.json({ message: `Failed to update permission: ${error.message}` }, { status: 500 });
     } else {

@@ -29,7 +29,6 @@ import { istDayKey, istToday } from '@/lib/datetime'
  */
 
 const WALLET_ROLE_NAMES = ['SALESMAN', 'ACCOUNTS_MANAGER', 'ADMIN', 'SUPER_ADMIN']
-const BANK_MODES = ['UPI', 'NEFT', 'CHEQUE', 'BANK', 'RTGS', 'IMPS']
 const CASH_MODES = ['CASH']
 const COUPON_MODES = ['COUPON', 'VOUCHER', 'TOKEN']
 
@@ -73,6 +72,28 @@ interface DayMovement {
   coupon: number
   collection: number
   expense: number
+}
+
+interface CollectionPayment {
+  id: string
+  collector_id: string
+  collector_name: string
+  party_id: string | null
+  party_name: string
+  payment_number: string | null
+  reference_number: string | null
+  payment_mode: string
+  bucket: Bucket
+  amount: number
+  payment_date: string
+}
+
+interface WalletUserRow {
+  id: string
+  name: string
+  email: string | null
+  role_id: string
+  status: string
 }
 
 export async function GET(req: NextRequest) {
@@ -123,7 +144,7 @@ export async function GET(req: NextRequest) {
         return q
       }
       if (scopePartyIds && scopePartyIds.length > 0) {
-        return fetchAllInChunks<Record<string, any>>(scopePartyIds, (chunk) =>
+        return fetchAllInChunks<WalletUserRow>(scopePartyIds, (chunk) =>
           build().in('party_id', chunk),
         )
       }
@@ -228,14 +249,27 @@ export async function GET(req: NextRequest) {
     const legacyPartyIds = [...new Set(Object.keys(ownerByPartyId))]
 
     // ── Pull windowed payments (primary by collector + legacy by party) ──────────
-    type PayRow = { amount: any; payment_mode: string; bank_name: string | null; created_by: string | null; party_id: string | null; payment_date: string }
-    const select = 'amount, payment_mode, bank_name, created_by, party_id, payment_date'
-    const inWindow = (q: any) => q.gte('payment_date', startInclusive).lte('payment_date', endExclusive)
-
+    type PayRow = {
+      id: string
+      amount: unknown
+      payment_number: string | null
+      reference_number: string | null
+      payment_mode: string
+      bank_name: string | null
+      created_by: string | null
+      party_id: string | null
+      payment_date: string
+    }
+    const select = 'id, amount, payment_number, reference_number, payment_mode, bank_name, created_by, party_id, payment_date'
     let primary: PayRow[] = []
     if (allCollectorIds.length > 0) {
       const res = await fetchAllInChunks<PayRow>(allCollectorIds, (chunk) =>
-        inWindow(supabaseAdmin.from('payments').select(select).in('created_by', chunk)),
+        supabaseAdmin
+          .from('payments')
+          .select(select)
+          .in('created_by', chunk)
+          .gte('payment_date', startInclusive)
+          .lte('payment_date', endExclusive),
       )
       if (res.error && !isSchemaCompatError(res.error)) throw res.error
       primary = res.data || []
@@ -243,14 +277,32 @@ export async function GET(req: NextRequest) {
     let legacy: PayRow[] = []
     if (legacyPartyIds.length > 0) {
       const res = await fetchAllInChunks<PayRow>(legacyPartyIds, (chunk) =>
-        inWindow(supabaseAdmin.from('payments').select(select).in('party_id', chunk)).is('created_by', null),
+        supabaseAdmin
+          .from('payments')
+          .select(select)
+          .in('party_id', chunk)
+          .is('created_by', null)
+          .gte('payment_date', startInclusive)
+          .lte('payment_date', endExclusive),
       )
       if (res.error && !isSchemaCompatError(res.error)) throw res.error
       legacy = res.data || []
     }
 
+    // Resolve payer names once for the detailed collection register. This list is
+    // what lets an accountant choose a salesman and audit every party payment.
+    const paymentPartyIds = [...new Set([...primary, ...legacy].map((row) => row.party_id).filter(Boolean))] as string[]
+    const partyNameById: Record<string, string> = {}
+    if (paymentPartyIds.length > 0) {
+      const partyRes = await fetchAllInChunks<{ id: string; name: string }>(paymentPartyIds, (chunk) =>
+        supabaseAdmin.from('parties').select('id, name').in('id', chunk),
+      )
+      for (const party of partyRes.data || []) partyNameById[party.id] = party.name
+    }
+
     // ── Aggregate collections by collector + by day ──────────────────────────────
     const collectorAgg: Record<string, CollectorAgg> = {}
+    const collectionList: CollectionPayment[] = []
     const dayMap: Record<string, DayMovement> = {}
     const ensureDay = (d: string): DayMovement =>
       (dayMap[d] ||= { date: d, cash: 0, bank: 0, coupon: 0, collection: 0, expense: 0 })
@@ -270,7 +322,7 @@ export async function GET(req: NextRequest) {
     const applyPayment = (row: PayRow, ownerId: string) => {
       const day = istDayKey(row.payment_date)
       if (!day) return
-      const amt = parseFloat(row.amount) || 0
+      const amt = Number(row.amount) || 0
       if (!amt) return
       const b = bucketOf(effectivePaymentMode(row.payment_mode, row.bank_name))
       const dm = ensureDay(day)
@@ -282,6 +334,19 @@ export async function GET(req: NextRequest) {
         c[b] += amt
         c.total += amt
         c.count += 1
+        collectionList.push({
+          id: row.id,
+          collector_id: ownerId,
+          collector_name: nameById[ownerId] || 'Collector',
+          party_id: row.party_id,
+          party_name: (row.party_id && partyNameById[row.party_id]) || 'Unknown party',
+          payment_number: row.payment_number,
+          reference_number: row.reference_number,
+          payment_mode: effectivePaymentMode(row.payment_mode, row.bank_name),
+          bucket: b,
+          amount: amt,
+          payment_date: row.payment_date,
+        })
       }
     }
 
@@ -331,6 +396,7 @@ export async function GET(req: NextRequest) {
 
     // ── Collection rollups over the selected range ──────────────────────────────
     const byCollector = Object.values(collectorAgg).sort((a, b) => b.total - a.total)
+    collectionList.sort((a, b) => b.payment_date.localeCompare(a.payment_date))
     const collection = byCollector.reduce(
       (acc, c) => ({
         cash: acc.cash + c.cash,
@@ -347,7 +413,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       range: { from, to, today },
-      collection: { ...collection, byCollector },
+      collection: { ...collection, byCollector, list: collectionList },
       expense: {
         total: expenseTotal,
         count: expenseCount,
@@ -404,7 +470,7 @@ async function emptyCollectionResponse(
   return NextResponse.json({
     success: true,
     range: { from, to, today },
-    collection: { cash: 0, bank: 0, coupon: 0, total: 0, count: 0, byCollector: [] },
+    collection: { cash: 0, bank: 0, coupon: 0, total: 0, count: 0, byCollector: [], list: [] },
     expense: {
       total,
       count,

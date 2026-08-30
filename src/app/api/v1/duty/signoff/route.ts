@@ -8,7 +8,7 @@ import {
   type DutyRouteRunState,
   type DutySignoffRequest,
 } from "@/lib/duty-signoff";
-import { getUserFromToken, resolveCompanyScope, supabaseAdmin, type AuthUser } from "@/lib/supabase-server";
+import { getUserFromToken, hasModulePermission, resolveCompanyScope, supabaseAdmin, type AuthUser } from "@/lib/supabase-server";
 
 type DbError = { code?: string; message?: string } | null | undefined;
 type DutySessionRow = { id: string; salesman_id: string; date: string; notes: string | null; status: string };
@@ -87,37 +87,61 @@ async function saveRunSignoff(run: DutyRouteRunState, duty: DutySessionRow | nul
 }
 
 async function resolveStopParties(routeId: string, stopIds: string[]) {
-  const names: Array<{ stop_id: string; party_id: string; name: string }> = [];
-  for (const stopId of stopIds) {
-    let partyId: string | null = null;
-    for (const column of ["party_id", "retailer_id", "store_id", "outlet_id"] as const) {
-      const result = await supabaseAdmin.from("route_stops").select(`id, ${column}`)
-        .eq("route_id", routeId).eq("id", stopId).maybeSingle();
-      if (!result.error) {
-        partyId = String((result.data as unknown as Record<string, unknown> | null)?.[column] || "") || null;
-        break;
+  if (stopIds.length === 0) return [];
+
+  const partyByStop = new Map<string, string>();
+  for (const column of ["party_id", "retailer_id", "store_id", "outlet_id"] as const) {
+    const result = await supabaseAdmin.from("route_stops").select(`id, ${column}`)
+      .eq("route_id", routeId).in("id", stopIds);
+    if (!result.error) {
+      for (const row of (result.data || []) as unknown as Array<Record<string, unknown>>) {
+        const partyId = String(row[column] || "");
+        if (partyId) partyByStop.set(String(row.id), partyId);
       }
-      if (!isSchemaGap(result.error)) break;
+      break;
     }
-    if (!partyId) continue;
-    const party = await supabaseAdmin.from("parties").select("id,name").eq("id", partyId).maybeSingle();
-    names.push({ stop_id: stopId, party_id: partyId, name: String(party.data?.name || "Party") });
+    if (!isSchemaGap(result.error)) break;
   }
-  return names;
+
+  const partyIds = [...new Set(partyByStop.values())];
+  if (partyIds.length === 0) return [];
+  const parties = await supabaseAdmin.from("parties").select("id,name").in("id", partyIds);
+  const partyNames = new Map(((parties.data || []) as Array<{ id: string; name: string | null }>).map((party) => [party.id, party.name]));
+
+  return stopIds.flatMap((stopId) => {
+    const partyId = partyByStop.get(stopId);
+    return partyId ? [{ stop_id: stopId, party_id: partyId, name: String(partyNames.get(partyId) || "Party") }] : [];
+  });
 }
 
 async function presentQueue(runs: DutyRouteRunState[]) {
   const salesmanIdList = [...new Set(runs.map((run) => run.salesman_id))];
   const routeIdList = [...new Set(runs.map((run) => run.route_id))];
-  const [users, routes] = await Promise.all([
+  const [users, appUsers, routes] = await Promise.all([
     salesmanIdList.length
       ? supabaseAdmin.from("users").select("id,name").in("id", salesmanIdList)
+      : Promise.resolve({ data: [] }),
+    salesmanIdList.length
+      ? supabaseAdmin.from("app_users").select("id,name").in("id", salesmanIdList)
       : Promise.resolve({ data: [] }),
     routeIdList.length
       ? supabaseAdmin.from("routes").select("id,name").in("id", routeIdList)
       : Promise.resolve({ data: [] }),
   ]);
-  const userNames = new Map(((users.data || []) as Array<{ id: string; name: string | null }>).map((row) => [row.id, row.name]));
+  const userRows = [
+    ...((users.data || []) as Array<{ id: string; name: string | null }>),
+    ...((appUsers.data || []) as Array<{ id: string; name: string | null }>),
+  ];
+  const userNames = new Map(userRows.map((row) => [row.id, row.name]));
+  const unresolvedIds = salesmanIdList.filter((id) => !userNames.get(id));
+  await Promise.all(unresolvedIds.map(async (id) => {
+    const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+    const authUser = data?.user;
+    if (!authUser) return;
+    const metadata = authUser.user_metadata || {};
+    const name = String(metadata.full_name || metadata.name || metadata.display_name || authUser.email?.split("@")[0] || "").trim();
+    if (name) userNames.set(id, name);
+  }));
   const routeNames = new Map(((routes.data || []) as Array<{ id: string; name: string | null }>).map((row) => [row.id, row.name]));
 
   return Promise.all(runs.map(async (run) => {
@@ -144,11 +168,14 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getUserFromToken(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-      return NextResponse.json({ error: "Only admins can review duty sign-off requests" }, { status: 403 });
+    const [canView, canApprove] = await Promise.all([
+      hasModulePermission(user, "approval_requests", "can_view"),
+      hasModulePermission(user, "approval_requests", "can_approve"),
+    ]);
+    if (!canView) {
+      return NextResponse.json({ error: "You do not have access to approval requests" }, { status: 403 });
     }
 
-    await ensureSignoffColumns();
     const companyId = await resolveCompanyScope(req, user) || (user.role === "ADMIN" ? user.party_id : null);
     let query = supabaseAdmin.from("salesman_route_runs").select("*")
       .not("signoff_request", "is", null).order("updated_at", { ascending: false }).limit(100);
@@ -171,7 +198,7 @@ export async function GET(req: NextRequest) {
     });
     const status = req.nextUrl.searchParams.get("status") || "pending";
     const runs = [...byId.values()].filter((run) => status === "all" || run.signoff_request?.status === status);
-    return NextResponse.json({ data: await presentQueue(runs) });
+    return NextResponse.json({ data: await presentQueue(runs), meta: { can_approve: canApprove } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load sign-off requests" }, { status: 500 });
   }
@@ -227,8 +254,8 @@ export async function PATCH(req: NextRequest) {
   try {
     const user = await getUserFromToken(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-      return NextResponse.json({ error: "Only admins can decide duty sign-off requests" }, { status: 403 });
+    if (!await hasModulePermission(user, "approval_requests", "can_approve")) {
+      return NextResponse.json({ error: "You do not have permission to decide approval requests" }, { status: 403 });
     }
     const body = await req.json().catch(() => ({}));
     const runId = String(body.run_id || "");

@@ -21,6 +21,7 @@ import {
     LayoutGrid,
     Layers,
     ClipboardList,
+    ClipboardCheck,
     CreditCard,
     Wallet,
     Gift,
@@ -42,6 +43,7 @@ import {
     Users,
     Radar,
     ReceiptIndianRupee,
+    BookOpenCheck,
     Warehouse,
     X,
   } from "lucide-react";
@@ -71,10 +73,10 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     label: "Sales",
     icon: ShoppingCart,
     items: [
-      { label: "Orders", href: "/dashboard/invoices/new", icon: ClipboardList, module: "invoices" },
-      { label: "Invoices", href: "/dashboard/invoices", icon: FileText, module: "invoices", exact: true },
-      { label: "Delivery Lots", href: "/dashboard/delivery-lots", icon: Box, module: "delivery_lots" },
+      { label: "Orders", href: "/dashboard/invoices/new", icon: ClipboardList, module: "orders" },
       { label: "Procurement", href: "/dashboard/procurement", icon: ShoppingCart, module: "procurement" },
+      { label: "Delivery Lots", href: "/dashboard/delivery-lots", icon: Box, module: "delivery_lots" },
+      { label: "Invoices", href: "/dashboard/invoices", icon: FileText, module: "invoices", exact: true },
       { label: "Reconcile", href: "/dashboard/payments/reconcile", icon: Navigation, module: "reconcile" },
       { label: "Driver Duty", href: "/dashboard/driver-duty", icon: Truck, module: "driver_duty" },
     ],
@@ -107,6 +109,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     label: "Finance & Accounts",
     icon: Wallet,
     items: [
+      { label: "Balance Sheet", href: "/dashboard/balance-sheet", icon: BookOpenCheck, module: "balance_sheet" },
       { label: "Financials", href: "/dashboard/payments", icon: CreditCard, module: "payments" },
       { label: "Wallets & Finances", href: "/dashboard/wallets", icon: Wallet, module: "wallets" },
       { label: "Expense Approvals", href: "/dashboard/expenses", icon: ReceiptIndianRupee, module: "expenses" },
@@ -146,6 +149,7 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     items: [
       { label: "Users", href: "/dashboard/users", icon: Users, module: "users" },
       { label: "Security", href: "/dashboard/security", icon: Shield, module: "security" },
+      { label: "Approval Requests", href: "/dashboard/approval-requests", icon: ClipboardCheck, module: "approval_requests" },
       { label: "Control Panel", href: "/dashboard/control-panel", icon: Settings, module: "control_panel" },
       { label: "WhatsApp Automation", href: "/dashboard/whatsapp", icon: MessageCircle, module: "control_panel" },
       { label: "Support Chat", href: "/dashboard/support", icon: MessageCircle, module: "support_chat" },
@@ -162,7 +166,7 @@ const DEFAULT_COLLAPSED_SIDEBAR_SECTIONS = SIDEBAR_SECTIONS.flatMap((section) =>
 const bottomNavItems = [
   { label: "Home",     href: "/dashboard",              icon: LayoutDashboard, module: "dashboard" },
   { label: "Parties",  href: "/dashboard/parties",      icon: Building2,       module: "parties"   },
-  { label: "Orders",   href: "/dashboard/invoices/new", icon: ClipboardList,   module: "invoices"  },
+  { label: "Orders",   href: "/dashboard/invoices/new", icon: ClipboardList,   module: "orders"    },
   { label: "Products", href: "/dashboard/products",     icon: Package,         module: "products"  },
 ];
 
@@ -184,6 +188,7 @@ type SidebarNavigationProps = {
   collapsed?: boolean;
   supportUnread: number;
   expenseBadge: number;
+  approvalBadge: number;
   collapsedSections: Set<string>;
   onToggleSection: (section: string) => void;
   onDashboardClick: (event: React.MouseEvent) => void;
@@ -195,6 +200,7 @@ export function SidebarNavigation({
   collapsed = false,
   supportUnread,
   expenseBadge,
+  approvalBadge,
   collapsedSections,
   onToggleSection,
   onDashboardClick,
@@ -246,6 +252,8 @@ export function SidebarNavigation({
                   ? supportUnread
                   : item.module === "expenses"
                     ? expenseBadge
+                    : item.module === "approval_requests"
+                      ? approvalBadge
                     : 0;
                 return (
                   <Link
@@ -296,6 +304,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [supportUnread, setSupportUnread] = useState(0);
   const [expenseBadge, setExpenseBadge] = useState(0);
+  const [approvalBadge, setApprovalBadge] = useState(0);
 
   // Some embedded browsers block clipboard access even on user actions.
   // Prevent that specific permission error from bubbling into the dev error overlay.
@@ -371,17 +380,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
 
-    // Fetch this user's permissions — use role_id if available, fall back to role name
-    const params = new URLSearchParams();
-    if (u?.role_id) params.set("role_id", u.role_id);
-    else if (u?.role) params.set("role_name", u.role);
-    else { setAllowedModules(new Set()); return; }
+    if (!u?.role) { setAllowedModules(new Set()); return; }
 
-    // Pass company_id if user has an active company
-    if (activeCompany?.id) params.set("company_id", activeCompany.id);
-
-    fetch(`/api/v1/permissions/me?${params}`)
-      .then((r) => r.json())
+    // Resolve permissions from the authenticated user on the server. Passing a
+    // role id from local storage made this request spoofable and, when the old
+    // route was missing, silently reduced the sidebar to hardcoded modules.
+    api<{ success: boolean; data: { module: string; can_view: boolean }[] }>(
+      "/api/v1/permissions/me",
+      { noCache: true },
+    )
       .then((json) => {
         if (json.success) {
           const allowed = new Set<string>(
@@ -558,6 +565,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // approvals; the timer only catches another user's.
   useVisibleInterval(refreshExpenseBadge, expensePollActive ? 60_000 : 0);
 
+  const approvalPollActive = !!user && pathname !== "/dashboard/approval-requests" && canView("approval_requests");
+
+  const refreshApprovalBadge = useCallback(() => {
+    if (!approvalPollActive) return;
+    void api<{ data?: unknown[] }>("/api/v1/duty/signoff?status=pending", { noCache: true, suppressErrorLog: true })
+      .then((result) => setApprovalBadge(Array.isArray(result.data) ? result.data.length : 0))
+      .catch(() => { /* approval module may not be granted yet */ });
+  }, [approvalPollActive]);
+
+  useEffect(() => {
+    if (!approvalPollActive) {
+      setApprovalBadge(0);
+      return;
+    }
+    refreshApprovalBadge();
+    window.addEventListener("approvalRequestsChanged", refreshApprovalBadge);
+    return () => window.removeEventListener("approvalRequestsChanged", refreshApprovalBadge);
+  }, [approvalPollActive, refreshApprovalBadge, activeCompany?.id]);
+
+  useVisibleInterval(refreshApprovalBadge, approvalPollActive ? 60_000 : 0);
+
   const isPartyUser = !!user && !["SALESMAN", "ADMIN", "SUPER_ADMIN", "DRIVER"].includes(user.role);
 
   // Filter sidebar sections by permission — empty categories disappear automatically.
@@ -711,6 +739,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           pathname={pathname}
           supportUnread={supportUnread}
           expenseBadge={expenseBadge}
+          approvalBadge={approvalBadge}
           collapsedSections={collapsedSidebarSections}
           onToggleSection={toggleSidebarSection}
           onDashboardClick={handleDashboardNavClick}
@@ -771,6 +800,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           collapsed={collapsed}
           supportUnread={supportUnread}
           expenseBadge={expenseBadge}
+          approvalBadge={approvalBadge}
           collapsedSections={collapsedSidebarSections}
           onToggleSection={toggleSidebarSection}
           onDashboardClick={handleDashboardNavClick}

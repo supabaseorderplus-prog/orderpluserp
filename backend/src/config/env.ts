@@ -1,7 +1,14 @@
 import { config } from 'dotenv';
+import { resolve } from 'path';
 import { z } from 'zod';
 
-// Load environment variables from .env file
+// Local development keeps shared Supabase credentials in the root Next.js env.
+// Docker/production injects its own environment and does not need this file.
+if (process.env.NODE_ENV !== 'production') {
+  config({ path: resolve(process.cwd(), '../.env.local') });
+}
+
+// Load backend-only settings and retain existing values from the shared env.
 config();
 
 const envSchema = z.object({
@@ -28,7 +35,11 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 function loadEnv(): Env {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = envSchema.safeParse({
+    ...process.env,
+    // Prefer the current shared Supabase project over a stale backend-only URL.
+    DATABASE_URL: process.env.SUPABASE_DB_URL || process.env.DATABASE_URL,
+  });
   if (!parsed.success) {
     console.error('Invalid environment variables:', parsed.error.flatten().fieldErrors);
     process.exit(1);
@@ -37,3 +48,6 @@ function loadEnv(): Env {
 }
 
 export const env = loadEnv();
+
+// Prisma reads DATABASE_URL directly from process.env during initialization.
+process.env.DATABASE_URL = env.DATABASE_URL;

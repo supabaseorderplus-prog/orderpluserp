@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { createPasswordAuthClient } from '@/lib/supabase-auth-api'
 
 export async function POST(req: NextRequest) {
   try {
-    const { refreshToken } = await req.json()
+    const { refreshToken } = await req.json() as { refreshToken?: string }
     if (!refreshToken) {
-      return NextResponse.json({ success: false, message: 'Refresh token required' }, { status: 400 })
+      return NextResponse.json({ success: false, message: 'Refresh token is required' }, { status: 400 })
     }
 
-    const { data, error } = await supabaseAdmin.auth.refreshSession({ refresh_token: refreshToken })
+    const authClient = createPasswordAuthClient()
+    const { data, error } = await authClient.auth.refreshSession({ refresh_token: refreshToken })
     if (error || !data.session) {
       return NextResponse.json({ success: false, message: 'Invalid refresh token' }, { status: 401 })
     }
@@ -20,7 +21,8 @@ export async function POST(req: NextRequest) {
         refreshToken: data.session.refresh_token,
       },
     })
-  } catch {
-    return NextResponse.json({ success: false, message: 'Refresh failed' }, { status: 500 })
+  } catch (error) {
+    console.error('[AUTH REFRESH] Failed:', error)
+    return NextResponse.json({ success: false, message: 'Session refresh is temporarily unavailable' }, { status: 503 })
   }
 }
