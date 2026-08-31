@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { api, getUser } from "@/lib/api";
 import ExpenseModal, { type ExpenseWalletOption } from "@/components/wallet/ExpenseModal";
+import { expenseHistoryAmounts } from "@/lib/expense-history-amounts";
 import type { ExpenseBucket, ExpenseStatus } from "@/lib/expenses-fallback";
 
 type ExpenseItem = {
@@ -229,7 +230,7 @@ function QueueRow({ expense, busy, onCancel }: { expense: ExpenseItem; busy: boo
   const StatusIcon = status.icon;
   const bucket = bucketMeta[expense.bucket];
   const BucketIcon = bucket.icon;
-  const finalAmount = expense.status === "APPROVED" ? Number(expense.approved_amount || 0) : 0;
+  const historyAmounts = expenseHistoryAmounts(expense);
 
   return (
     <article className="relative overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-4 shadow-[0_8px_28px_rgba(0,0,0,0.035)]">
@@ -264,9 +265,9 @@ function QueueRow({ expense, busy, onCancel }: { expense: ExpenseItem; busy: boo
           )}
         </div>
         <div className="ml-auto text-right">
-          <div className="text-lg font-bold tabular-nums text-zinc-900">{fmt(expense.requested_amount)}</div>
-          {expense.status === "APPROVED" && finalAmount !== expense.requested_amount && (
-            <div className="text-[0.65rem] font-bold text-emerald-600">Approved {fmt(finalAmount)}</div>
+          <div className="text-lg font-bold tabular-nums text-zinc-900">{fmt(historyAmounts.primaryAmount)}</div>
+          {historyAmounts.requestedAmount !== null && (
+            <div className="text-[0.65rem] font-medium text-zinc-400">Requested {fmt(historyAmounts.requestedAmount)}</div>
           )}
           {expense.can_cancel && (
             <button
