@@ -52,6 +52,13 @@ interface DistanceSummary {
   selected_date_check_in: string | null;
   selected_date_check_out: string | null;
   selected_date_source: "verified_gps" | "duty_session";
+  selected_date_odometer: {
+    start_km: number;
+    end_km: number | null;
+    distance_km: number | null;
+    start_photo_url: string | null;
+    end_photo_url: string | null;
+  } | null;
   accepted_points: number;
   rejected_points: number;
   truncated: boolean;
@@ -260,6 +267,30 @@ export function TrackingAnalysisPanel({ salesmen }: { salesmen: SalesmanOption[]
                     {analysis.distance_summary.rejected_points > 0 && <span className="rounded-full bg-amber-400/10 px-2.5 py-1 text-amber-300">{analysis.distance_summary.rejected_points} noisy points removed</span>}
                     <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-zinc-300">{dutyStatus(analysis.distance_summary.selected_date_status)}</span>
                   </div>
+                  {analysis.distance_summary.selected_date_odometer && (
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      {([
+                        {
+                          label: "Start odometer",
+                          km: analysis.distance_summary.selected_date_odometer.start_km,
+                          url: analysis.distance_summary.selected_date_odometer.start_photo_url,
+                        },
+                        {
+                          label: "End odometer",
+                          km: analysis.distance_summary.selected_date_odometer.end_km,
+                          url: analysis.distance_summary.selected_date_odometer.end_photo_url,
+                        },
+                      ] as const).map((item) => (
+                        <div key={item.label} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.06]">
+                          {item.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.url} alt={`${item.label} evidence`} className="h-28 w-full bg-black object-cover" />
+                          ) : <div className="flex h-28 items-center justify-center bg-black/30 text-xs font-semibold text-zinc-500">{item.km == null ? "Not captured yet" : "Photo unavailable"}</div>}
+                          <div className="p-3"><div className="text-[0.62rem] font-bold uppercase tracking-wide text-zinc-500">{item.label}</div><div className="mt-1 text-lg font-black tabular-nums text-white">{item.km == null ? "Pending" : `${Number(item.km).toLocaleString("en-IN")} km`}</div></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

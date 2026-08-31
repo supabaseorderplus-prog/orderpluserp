@@ -149,6 +149,10 @@ interface DutySession {
   start_odometer_km: number | null;
   end_odometer_km: number | null;
   odometer_distance_km: number | null;
+  start_odometer_photo_path: string | null;
+  end_odometer_photo_path: string | null;
+  start_odometer_photo_url: string | null;
+  end_odometer_photo_url: string | null;
 }
 
 interface ActiveRouteVisit {
@@ -967,9 +971,26 @@ export default function SalesmanDashboard() {
               ))}
             </div>
             {session.start_odometer_km != null && (
-              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs">
-                <span className="flex items-center gap-1.5 font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Start odometer verified</span>
-                <span className="font-bold tabular-nums text-zinc-900">{Number(session.start_odometer_km).toLocaleString("en-IN")} km</span>
+              <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
+                <div className="flex items-center gap-3 p-2.5">
+                  {session.start_odometer_photo_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={session.start_odometer_photo_url} alt="Start odometer evidence" className="h-14 w-20 shrink-0 rounded-lg bg-zinc-900 object-cover" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Start odometer verified</span>
+                    <div className="mt-1 text-lg font-black tabular-nums text-zinc-900">{Number(session.start_odometer_km).toLocaleString("en-IN")} km</div>
+                  </div>
+                </div>
+                {session.end_odometer_km != null && (
+                  <div className="flex items-center gap-3 border-t border-emerald-200 p-2.5">
+                    {session.end_odometer_photo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={session.end_odometer_photo_url} alt="End odometer evidence" className="h-14 w-20 shrink-0 rounded-lg bg-zinc-900 object-cover" />
+                    )}
+                    <div className="min-w-0 flex-1"><span className="text-xs font-semibold text-emerald-700">End odometer verified</span><div className="mt-1 text-lg font-black tabular-nums text-zinc-900">{Number(session.end_odometer_km).toLocaleString("en-IN")} km</div></div>
+                  </div>
+                )}
               </div>
             )}
           </div>

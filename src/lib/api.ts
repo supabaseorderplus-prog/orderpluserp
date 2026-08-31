@@ -4,6 +4,7 @@ interface ApiOptions {
   method?: string;
   body?: unknown;
   formData?: FormData;
+  signal?: AbortSignal;
   headers?: Record<string, string>;
   suppressErrorLog?: boolean;
   _retried?: boolean;
@@ -256,8 +257,11 @@ async function apiCore<T = unknown>(path: string, options: ApiOptions = {}): Pro
         : options.body != null
           ? JSON.stringify(options.body)
           : undefined,
+      signal: options.signal,
     });
   } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    if (err instanceof Error && err.name === 'AbortError') throw err;
     console.error('Network error:', err);
     const isNetworkError = err instanceof TypeError && (
       err.message.toLowerCase().includes('fetch') ||

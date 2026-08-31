@@ -12,7 +12,7 @@ export const maxDuration = 60;
 
 const BUCKET = "duty-odometer-photos";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MIN_OCR_CONFIDENCE = 35;
+const MIN_OCR_CONFIDENCE = 25;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const LANGUAGE_PATH = path.join(process.cwd(), "node_modules", "@tesseract.js-data", "eng", "4.0.0");
 
@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     const today = istToday();
     const formData = await req.formData();
     const image = formData.get("image");
+    const ocrImage = formData.get("ocr_image");
     const phase = formData.get("phase");
 
     if (!(image instanceof File) || (phase !== "start" && phase !== "end")) {
@@ -89,6 +90,11 @@ export async function POST(req: NextRequest) {
     }
     if (image.size === 0 || image.size > MAX_IMAGE_BYTES) {
       return NextResponse.json({ error: "Photo must be smaller than 8 MB." }, { status: 400 });
+    }
+    if (ocrImage instanceof File && (
+      !ALLOWED_IMAGE_TYPES.has(ocrImage.type) || ocrImage.size === 0 || ocrImage.size > MAX_IMAGE_BYTES
+    )) {
+      return NextResponse.json({ error: "Odometer scan image is invalid." }, { status: 400 });
     }
 
     const sessionQuery = await supabaseAdmin
@@ -115,7 +121,12 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await image.arrayBuffer());
-    const ocr = await readOdometer(buffer);
+    // New clients send the exact green-guide crop for OCR and the full frame as
+    // immutable duty evidence. Older clients remain compatible with one image.
+    const ocrBuffer = ocrImage instanceof File
+      ? Buffer.from(await ocrImage.arrayBuffer())
+      : buffer;
+    const ocr = await readOdometer(ocrBuffer);
     const extracted = extractOdometerReading(ocr.text);
     if (extracted.reading == null || ocr.confidence < MIN_OCR_CONFIDENCE) {
       return NextResponse.json({

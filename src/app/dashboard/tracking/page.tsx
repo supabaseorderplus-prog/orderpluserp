@@ -99,6 +99,11 @@ interface DaySession {
   total_stops: number;
   status: string;
   notes: string | null;
+  start_odometer_km?: number | null;
+  end_odometer_km?: number | null;
+  odometer_distance_km?: number | null;
+  start_odometer_photo_url?: string | null;
+  end_odometer_photo_url?: string | null;
 }
 interface PartyVisit {
   id: string;
@@ -855,6 +860,24 @@ export default function TrackingPage() {
                     <div className="text-right text-[0.58rem] font-semibold text-emerald-600">{verifiedTrail.rejected} noisy pings removed</div>
                   )}
                 </div>
+                {selected.session?.start_odometer_km != null && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                      {selected.session.start_odometer_photo_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selected.session.start_odometer_photo_url} alt="Start odometer evidence" className="h-20 w-full bg-zinc-900 object-cover" />
+                      )}
+                      <div className="px-2.5 py-2"><div className="text-[0.58rem] font-bold uppercase tracking-wide text-zinc-400">Start odometer</div><div className="mt-0.5 text-sm font-black tabular-nums text-zinc-900">{Number(selected.session.start_odometer_km).toLocaleString("en-IN")} km</div></div>
+                    </div>
+                    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                      {selected.session.end_odometer_photo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selected.session.end_odometer_photo_url} alt="End odometer evidence" className="h-20 w-full bg-zinc-900 object-cover" />
+                      ) : <div className="flex h-20 items-center justify-center bg-zinc-100 text-[0.62rem] font-semibold text-zinc-400">Duty still active</div>}
+                      <div className="px-2.5 py-2"><div className="text-[0.58rem] font-bold uppercase tracking-wide text-zinc-400">End odometer</div><div className="mt-0.5 text-sm font-black tabular-nums text-zinc-900">{selected.session.end_odometer_km == null ? "Pending" : `${Number(selected.session.end_odometer_km).toLocaleString("en-IN")} km`}</div></div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Locked route progress */}

@@ -4,6 +4,7 @@ import { normalizeCoordinates } from "@/lib/location-coordinates";
 import { istToday } from "@/lib/datetime";
 import { canEndDuty, encodeSessionRouteRun, parseSessionRouteRun, previousSessionNotes, remainingStopIds, type DutyRouteRunState } from "@/lib/duty-signoff";
 import { encodeDutyOdometerEvidence, parseDutyOdometerEvidence, validateOdometerProgress } from "@/lib/odometer-reading";
+import { attachOdometerPhotoUrls } from "@/lib/odometer-photo-server";
 
 function errMsg(err: unknown): string {
   try {
@@ -30,11 +31,10 @@ function isOdometerSchemaGap(error: { code?: string; message?: string } | null |
   return error.code === "42703" || /odometer_(km|photo|ocr|distance)/i.test(error.message || "");
 }
 
-function withOdometerEvidence(row: Record<string, unknown> | null) {
+async function withOdometerEvidence(row: Record<string, unknown> | null) {
   if (!row) return null;
   const evidence = parseDutyOdometerEvidence(previousSessionNotes(row.notes as string | null | undefined));
-  if (!evidence) return row;
-  return {
+  const hydrated = evidence ? {
     ...row,
     start_odometer_km: row.start_odometer_km ?? evidence.start.reading,
     end_odometer_km: row.end_odometer_km ?? evidence.end?.reading ?? null,
@@ -43,7 +43,8 @@ function withOdometerEvidence(row: Record<string, unknown> | null) {
     end_odometer_photo_path: row.end_odometer_photo_path ?? evidence.end?.photo_path ?? null,
     start_odometer_ocr_confidence: row.start_odometer_ocr_confidence ?? evidence.start.confidence,
     end_odometer_ocr_confidence: row.end_odometer_ocr_confidence ?? evidence.end?.confidence ?? null,
-  };
+  } : row;
+  return attachOdometerPhotoUrls(hydrated);
 }
 
 async function insertCheckInLocation(input: {
@@ -104,7 +105,7 @@ export async function GET(req: NextRequest) {
       console.error("duty/session GET db error:", error.message, error.code);
       return NextResponse.json({ error: error.message || error.code || "DB error" }, { status: 500 });
     }
-    return NextResponse.json({ data: withOdometerEvidence(data as Record<string, unknown> | null) });
+    return NextResponse.json({ data: await withOdometerEvidence(data as Record<string, unknown> | null) });
   } catch (err) {
     console.error("duty/session GET crash:", errMsg(err));
     return safeErr(err, 500);
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
     const startKm = Number(start_odometer_km);
     const startConfidence = Number(start_odometer_ocr_confidence);
     const expectedPhotoPrefix = `${salesmanId}/${today}/start-`;
-    if (!Number.isFinite(startKm) || startKm < 0 || !Number.isFinite(startConfidence) || startConfidence < 35 ||
+    if (!Number.isFinite(startKm) || startKm < 0 || !Number.isFinite(startConfidence) || startConfidence < 25 ||
         typeof start_odometer_photo_path !== "string" || !start_odometer_photo_path.startsWith(expectedPhotoPrefix)) {
       return NextResponse.json({ error: "A verified start odometer photo is required before duty can begin." }, { status: 422 });
     }
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
       companyId,
       recordedAt: String(data.check_in_time || now),
     });
-    return NextResponse.json({ data: withOdometerEvidence(data as Record<string, unknown>) });
+    return NextResponse.json({ data: await withOdometerEvidence(data as Record<string, unknown>) });
   } catch (err) {
     console.error("duty/session POST crash:", errMsg(err));
     return safeErr(err, 500);
@@ -240,7 +241,7 @@ export async function PATCH(req: NextRequest) {
       const endConfidence = Number(end_odometer_ocr_confidence);
       const expectedPhotoPrefix = `${salesmanId}/${today}/end-`;
       const progressError = validateOdometerProgress(startKm, endKm);
-      if (progressError || !Number.isFinite(endConfidence) || endConfidence < 35 ||
+      if (progressError || !Number.isFinite(endConfidence) || endConfidence < 25 ||
           typeof end_odometer_photo_path !== "string" || !end_odometer_photo_path.startsWith(expectedPhotoPrefix)) {
         return NextResponse.json({
           error: progressError || "A verified end odometer photo is required before duty can end.",
@@ -336,7 +337,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message || error.code || "DB error" }, { status: 500 });
     }
     if (!data) return NextResponse.json({ error: "No active session found for today" }, { status: 404 });
-    return NextResponse.json({ data: withOdometerEvidence(data as Record<string, unknown>) });
+    return NextResponse.json({ data: await withOdometerEvidence(data as Record<string, unknown>) });
   } catch (err) {
     console.error("duty/session PATCH crash:", errMsg(err));
     return safeErr(err, 500);

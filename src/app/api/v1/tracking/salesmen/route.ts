@@ -3,6 +3,9 @@ import { supabaseAdmin, getUserFromToken, resolveCompanyScope, getPartyDescendan
 import { IN_FILTER_MAX_IDS, fetchAllInChunks } from "@/lib/supabase-in-chunks";
 import { normalizeCoordinates } from "@/lib/location-coordinates";
 import { istToday } from "@/lib/datetime";
+import { previousSessionNotes } from "@/lib/duty-signoff";
+import { parseDutyOdometerEvidence } from "@/lib/odometer-reading";
+import { attachOdometerPhotoUrls } from "@/lib/odometer-photo-server";
 
 type SupabaseError = { code?: string; message?: string } | null | undefined;
 
@@ -33,6 +36,19 @@ function sessionLocationFallback(session: Record<string, unknown> | null): Recor
     activity: isActive ? "check_in" : "checked_out",
     note: isActive ? "Duty check-in location" : "Duty checkout location",
   };
+}
+
+async function hydrateOdometerSession(row: Record<string, unknown>) {
+  const evidence = parseDutyOdometerEvidence(previousSessionNotes(row.notes as string | null | undefined));
+  const hydrated = evidence ? {
+    ...row,
+    start_odometer_km: row.start_odometer_km ?? evidence.start.reading,
+    end_odometer_km: row.end_odometer_km ?? evidence.end?.reading ?? null,
+    odometer_distance_km: row.odometer_distance_km ?? evidence.distance_km,
+    start_odometer_photo_path: row.start_odometer_photo_path ?? evidence.start.photo_path,
+    end_odometer_photo_path: row.end_odometer_photo_path ?? evidence.end?.photo_path ?? null,
+  } : row;
+  return attachOdometerPhotoUrls(hydrated);
 }
 
 async function fetchSalesmenFromTable(
@@ -142,7 +158,9 @@ export async function GET(req: NextRequest) {
       if (sessionErr) {
         console.error("[tracking/salesmen] sessions query error:", sessionErr.message, sessionErr.code);
       }
-      sessions = (sessionRows as Record<string, unknown>[] | null) ?? [];
+      sessions = await Promise.all(
+        ((sessionRows as Record<string, unknown>[] | null) ?? []).map(hydrateOdometerSession),
+      );
     }
 
     const [dy, dm, dd] = date.split("-").map(Number);

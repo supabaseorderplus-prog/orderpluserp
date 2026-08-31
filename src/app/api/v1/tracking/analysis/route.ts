@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPartyDescendants, getUserFromToken, resolveCompanyScope, supabaseAdmin } from "@/lib/supabase-server";
 import { istToday } from "@/lib/datetime";
 import { buildVerifiedTrail, type TrackingPoint } from "@/lib/tracking-integrity";
+import { previousSessionNotes } from "@/lib/duty-signoff";
+import { parseDutyOdometerEvidence } from "@/lib/odometer-reading";
+import { createOdometerPhotoSignedUrl } from "@/lib/odometer-photo-server";
 
 type Visit = {
   stop_id?: string;
@@ -210,6 +213,13 @@ export async function GET(req: NextRequest) {
     runs = [...runsByDate.values()].sort((a, b) => b.work_date.localeCompare(a.work_date));
 
     const selectedSession = sessions.find((session) => session.date === selectedDate);
+    const selectedOdometer = parseDutyOdometerEvidence(previousSessionNotes(selectedSession?.notes));
+    const [startOdometerPhotoUrl, endOdometerPhotoUrl] = selectedOdometer
+      ? await Promise.all([
+          createOdometerPhotoSignedUrl(selectedOdometer.start.photo_path),
+          createOdometerPhotoSignedUrl(selectedOdometer.end?.photo_path),
+        ])
+      : [null, null];
     const datesToVerify = [...new Set([...sessions.map((session) => session.date), selectedDate])];
     const verifiedByDate = await verifiedDistancesForDates(salesmanId, datesToVerify);
     const verifiedSelectedDay = verifiedByDate.get(selectedDate) || {
@@ -318,6 +328,13 @@ export async function GET(req: NextRequest) {
           selected_date_check_in: selectedSession?.check_in_time || null,
           selected_date_check_out: selectedSession?.check_out_time || null,
           selected_date_source: verifiedSelectedDay.hasLogs ? "verified_gps" : "duty_session",
+          selected_date_odometer: selectedOdometer ? {
+            start_km: selectedOdometer.start.reading,
+            end_km: selectedOdometer.end?.reading ?? null,
+            distance_km: selectedOdometer.distance_km,
+            start_photo_url: startOdometerPhotoUrl,
+            end_photo_url: endOdometerPhotoUrl,
+          } : null,
           accepted_points: verifiedSelectedDay.acceptedPoints,
           rejected_points: verifiedSelectedDay.rejectedPoints,
           truncated: verifiedSelectedDay.truncated,
